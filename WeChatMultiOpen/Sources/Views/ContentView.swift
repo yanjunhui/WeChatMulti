@@ -16,8 +16,14 @@ struct ContentView: View {
     /// 视图模型
     @StateObject private var viewModel = MainViewModel()
 
+    /// 更新管理器
+    @StateObject private var updateManager = UpdateManager.shared
+
     /// 窗口控制
     @Environment(\.dismiss) private var dismiss
+
+    /// 是否显示更新弹窗
+    @State private var showUpdateSheet: Bool = false
 
     // MARK: - 视图
 
@@ -88,6 +94,30 @@ struct ContentView: View {
         }
         .sheet(isPresented: $viewModel.showSettings) {
             SettingsView()
+        }
+        .sheet(isPresented: $showUpdateSheet) {
+            if let update = updateManager.availableUpdate {
+                UpdateAvailableSheet(
+                    updateInfo: update,
+                    onDismiss: {
+                        showUpdateSheet = false
+                    },
+                    onDownload: {
+                        updateManager.openDownloadPage()
+                        showUpdateSheet = false
+                    },
+                    onIgnore: {
+                        updateManager.ignoreCurrentUpdate()
+                        showUpdateSheet = false
+                    }
+                )
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showUpdateSheet)) { _ in
+            // 收到通知后显示更新弹窗
+            if updateManager.availableUpdate != nil {
+                showUpdateSheet = true
+            }
         }
     }
 

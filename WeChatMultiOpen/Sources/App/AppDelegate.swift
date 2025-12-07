@@ -9,6 +9,13 @@ import Foundation
 import AppKit
 import SwiftUI
 
+// MARK: - 通知名称扩展
+
+extension Notification.Name {
+    /// 显示更新弹窗的通知
+    static let showUpdateSheet = Notification.Name("showUpdateSheet")
+}
+
 /// 应用程序代理
 /// 处理应用程序生命周期事件和窗口管理
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -103,31 +110,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 启动时检查更新
     @MainActor
     private func checkForUpdatesOnLaunch() async {
-        if let update = await updateManager.checkForUpdatesSilently() {
-            // 显示更新提示
-            showUpdateAlert(update: update)
-        }
-    }
-
-    /// 显示更新提示弹窗
-    @MainActor
-    private func showUpdateAlert(update: UpdateInfo) {
-        let alert = NSAlert()
-        alert.messageText = "发现新版本 v\(update.version)"
-        alert.informativeText = "当前版本: \(updateManager.getCurrentVersion())\n发布日期: \(update.formattedPublishDate)\n\n是否前往下载？"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "前往下载")
-        alert.addButton(withTitle: "稍后提醒")
-        alert.addButton(withTitle: "忽略此版本")
-
-        let response = alert.runModal()
-        switch response {
-        case .alertFirstButtonReturn:
-            updateManager.openDownloadPage()
-        case .alertThirdButtonReturn:
-            updateManager.ignoreCurrentUpdate()
-        default:
-            break
+        if let _ = await updateManager.checkForUpdatesSilently() {
+            // 通过通知让 ContentView 显示更新弹窗
+            NotificationCenter.default.post(name: .showUpdateSheet, object: nil)
+            // 确保主窗口可见
+            showMainWindow()
         }
     }
 
