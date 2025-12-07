@@ -34,6 +34,9 @@ struct WeChatInstance: Identifiable, Equatable, Hashable {
     /// 进程是否正在运行
     var isRunning: Bool
 
+    /// 是否正在创建中
+    var isCreating: Bool
+
     /// CPU使用率（百分比）
     var cpuUsage: Double
 
@@ -103,6 +106,7 @@ struct WeChatInstance: Identifiable, Equatable, Hashable {
         self.copyPath = nil
         self.instanceNumber = instanceNumber
         self.isRunning = true
+        self.isCreating = false
         self.cpuUsage = 0.0
         self.memoryUsage = 0.0
     }
@@ -115,6 +119,20 @@ struct WeChatInstance: Identifiable, Equatable, Hashable {
         self.copyPath = copyPath
         self.instanceNumber = instanceNumber
         self.isRunning = false
+        self.isCreating = false
+        self.cpuUsage = 0.0
+        self.memoryUsage = 0.0
+    }
+
+    /// 创建"创建中"的占位实例
+    init(creatingInstanceNumber: Int) {
+        self.processId = nil
+        self.launchTime = nil
+        self.bundleIdentifier = "com.tencent.xinWeChat.creating.\(creatingInstanceNumber)"
+        self.copyPath = nil
+        self.instanceNumber = creatingInstanceNumber
+        self.isRunning = false
+        self.isCreating = true
         self.cpuUsage = 0.0
         self.memoryUsage = 0.0
     }

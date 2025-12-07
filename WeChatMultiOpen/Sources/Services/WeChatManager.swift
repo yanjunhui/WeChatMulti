@@ -104,16 +104,9 @@ final class WeChatManager: ObservableObject {
         isLaunching = true
         errorMessage = nil
 
-        // "启动新微信"按钮的逻辑：
-        // 始终创建/启动副本，让用户通过点击列表中的原版微信来启动原版
-        // 这样可以避免混淆，因为原版微信始终显示在列表中
-        if let availableCopy = findAvailableCopy() {
-            // 有未运行的副本，直接启动
-            launchCopy(availableCopy)
-        } else {
-            // 没有可用副本，创建新副本并启动
-            createAndLaunchNewCopy()
-        }
+        // "新建微信"按钮的逻辑：
+        // 始终创建新副本并启动，已有的未运行副本需要用户手动点击启动
+        createAndLaunchNewCopy()
 
         return true
     }
@@ -414,6 +407,17 @@ final class WeChatManager: ObservableObject {
             }
         }
 
+        // 4. 保留"创建中"的占位实例（如果对应的副本还没有出现在列表中）
+        for existingInstance in instances where existingInstance.isCreating {
+            // 检查是否已经有对应编号的真实实例（运行中或未运行的副本）
+            let hasRealInstance = updatedInstances.contains { instance in
+                instance.instanceNumber == existingInstance.instanceNumber && !instance.isCreating
+            }
+            if !hasRealInstance {
+                updatedInstances.append(existingInstance)
+            }
+        }
+
         // 按照 Bundle ID 的副本编号排序（原版排第一，然后按副本编号升序）
         updatedInstances.sort { lhs, rhs in
             let lhsOrder = getSortOrder(for: lhs.bundleIdentifier)
@@ -606,13 +610,29 @@ final class WeChatManager: ObservableObject {
 
     /// 创建并启动新的微信副本
     private func createAndLaunchNewCopy() {
+        // 获取下一个副本编号
+        let nextNumber = getNextCopyNumber()
+
+        // 先在 UI 上创建一个"创建中"的占位实例
+        let creatingInstance = WeChatInstance(creatingInstanceNumber: nextNumber)
+        DispatchQueue.main.async {
+            self.instances.append(creatingInstance)
+        }
+
         createNewCopy { [weak self] result in
+            guard let self = self else { return }
+
             switch result {
             case .success(let copy):
-                self?.launchCopy(copy)
+                // 启动副本，占位实例会在 refreshInstances 检测到真实实例后自动移除
+                self.launchCopy(copy)
             case .failure(let error):
-                self?.isLaunching = false
-                self?.errorMessage = "创建副本失败: \(error.localizedDescription)"
+                // 创建失败时移除占位实例
+                DispatchQueue.main.async {
+                    self.instances.removeAll { $0.isCreating && $0.instanceNumber == nextNumber }
+                    self.isLaunching = false
+                    self.errorMessage = "创建副本失败: \(error.localizedDescription)"
+                }
             }
         }
     }

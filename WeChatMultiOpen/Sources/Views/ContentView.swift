@@ -270,7 +270,6 @@ struct ContentView: View {
 
                 // 新建实例卡片
                 AddInstanceCardView(
-                    isLoading: viewModel.isLaunching,
                     onTap: {
                         viewModel.launchNewInstance()
                     }
@@ -315,7 +314,6 @@ struct ContentView: View {
 
                 // 新建实例行
                 AddInstanceRowView(
-                    isLoading: viewModel.isLaunching,
                     onTap: {
                         viewModel.launchNewInstance()
                     }

@@ -252,6 +252,7 @@ final class UpdateManager: ObservableObject {
     /// 静默检查更新（不更新 UI 状态，用于后台检查）
     /// - Parameter includePrerelease: 是否包含预发布版本
     /// - Returns: 更新信息（如果有可用更新，即使被忽略也会返回）
+    @MainActor
     func checkForUpdatesSilently(includePrerelease: Bool = false) async -> UpdateInfo? {
         do {
             let release = try await fetchLatestRelease(includePrerelease: includePrerelease)

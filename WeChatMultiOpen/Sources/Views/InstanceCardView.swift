@@ -55,11 +55,13 @@ struct InstanceCardView: View {
         }
         .frame(width: AppTheme.Dimensions.cardWidth, height: AppTheme.Dimensions.cardHeight)
         .background(cardBackground)
+        .contentShape(RoundedRectangle(cornerRadius: AppTheme.Dimensions.cardCornerRadius))
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.Dimensions.cardCornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.Dimensions.cardCornerRadius)
                 .stroke(
-                    isHovered ? AppTheme.Colors.primary.opacity(0.5) : Color.secondary.opacity(0.2),
+                    instance.isCreating ? AppTheme.Colors.primary.opacity(0.3) :
+                    (isHovered ? AppTheme.Colors.primary.opacity(0.5) : Color.secondary.opacity(0.2)),
                     lineWidth: 1
                 )
         )
@@ -72,9 +74,12 @@ struct InstanceCardView: View {
         .scaleEffect(isHovered ? 1.03 : 1.0)
         .animation(AppTheme.Animations.spring, value: isHovered)
         .onHover { hovering in
-            isHovered = hovering
+            if !instance.isCreating {
+                isHovered = hovering
+            }
         }
         .onTapGesture(count: 2) {
+            guard !instance.isCreating else { return }
             if instance.isRunning {
                 onActivate?()
             } else {
@@ -82,6 +87,7 @@ struct InstanceCardView: View {
             }
         }
         .onTapGesture(count: 1) {
+            guard !instance.isCreating else { return }
             if instance.isRunning {
                 onActivate?()
             } else {
@@ -89,68 +95,90 @@ struct InstanceCardView: View {
             }
         }
         .contextMenu {
-            contextMenuContent
+            if !instance.isCreating {
+                contextMenuContent
+            }
         }
         .sheet(isPresented: $showRenameSheet) {
             renameSheet
         }
+        .disabled(instance.isCreating)
     }
 
     // MARK: - 卡片内容
 
     private var cardContent: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(spacing: AppTheme.Dimensions.smallSpacing) {
-                Spacer()
-                    .frame(height: 8)
+        VStack(spacing: AppTheme.Dimensions.smallSpacing) {
+            Spacer()
+                .frame(height: 8)
 
-                // 微信图标
-                instanceIcon
+            // 微信图标（含操作按钮）
+            instanceIcon
 
-                // 实例名称
-                Text(instance.displayName)
-                    .font(AppTheme.Fonts.subtitle)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+            // 实例名称
+            Text(instance.displayName)
+                .font(AppTheme.Fonts.subtitle)
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
 
-                // 状态信息
-                statusInfo
+            // 状态信息
+            statusInfo
 
-                Spacer()
-            }
-            .padding(.horizontal, AppTheme.Dimensions.smallPadding)
-            .padding(.bottom, AppTheme.Dimensions.smallPadding)
-
-            // 关闭/启动按钮
-            actionButton
+            Spacer()
         }
+        .padding(.horizontal, AppTheme.Dimensions.smallPadding)
+        .padding(.bottom, AppTheme.Dimensions.smallPadding)
     }
 
     // MARK: - 微信图标
 
+    /// 操作按钮尺寸（与图标大小相同，完全覆盖背景）
+    private var actionButtonSize: CGFloat {
+        AppTheme.Dimensions.cardIconSize
+    }
+
     private var instanceIcon: some View {
         ZStack {
-            // 背景圆形
-            Circle()
-                .fill(instance.isRunning ? AppTheme.Colors.primaryGradient : AppTheme.Colors.inactiveGradient)
-                .frame(width: AppTheme.Dimensions.cardIconSize, height: AppTheme.Dimensions.cardIconSize)
-
-            // 图标
-            Image(systemName: "message.fill")
-                .font(.system(size: 26, weight: .semibold))
-                .foregroundColor(.white)
-
-            // 运行状态指示器
-            if instance.isRunning {
+            if instance.isCreating {
+                // 创建中状态 - 显示进度指示器
                 Circle()
-                    .fill(AppTheme.Colors.success)
-                    .frame(width: 14, height: 14)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white, lineWidth: 2)
-                    )
-                    .offset(x: 20, y: 20)
+                    .stroke(AppTheme.Colors.primary.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                    .frame(width: AppTheme.Dimensions.cardIconSize, height: AppTheme.Dimensions.cardIconSize)
+
+                ProgressView()
+                    .scaleEffect(0.9)
+            } else {
+                // 背景圆形
+                Circle()
+                    .fill(instance.isRunning ? AppTheme.Colors.primaryGradient : AppTheme.Colors.inactiveGradient)
+                    .frame(width: AppTheme.Dimensions.cardIconSize, height: AppTheme.Dimensions.cardIconSize)
+
+                // 微信图标（悬停时淡出）
+                Image(systemName: "message.fill")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundColor(.white)
+                    .opacity(isHovered ? 0 : 1)
+                    .scaleEffect(isHovered ? 0.6 : 1.0)
+                    .animation(.easeInOut(duration: 0.2), value: isHovered)
+
+                // 操作按钮（悬停时淡入并放大）
+                actionButton
+                    .opacity(isHovered ? 1 : 0)
+                    .scaleEffect(isHovered ? 1.0 : 0.5)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
+
+                // 运行状态指示器
+                if instance.isRunning {
+                    Circle()
+                        .fill(AppTheme.Colors.success)
+                        .frame(width: 14, height: 14)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white, lineWidth: 2)
+                        )
+                        .offset(x: 20, y: 20)
+                }
             }
         }
     }
@@ -159,7 +187,16 @@ struct InstanceCardView: View {
 
     private var statusInfo: some View {
         VStack(spacing: 4) {
-            if instance.isRunning {
+            if instance.isCreating {
+                // 创建中状态
+                Text("创建中...")
+                    .font(AppTheme.Fonts.caption)
+                    .foregroundColor(AppTheme.Colors.primary)
+
+                Text("请稍候")
+                    .font(AppTheme.Fonts.tiny)
+                    .foregroundColor(.secondary.opacity(0.7))
+            } else if instance.isRunning {
                 // 运行时长
                 HStack(spacing: 4) {
                     Image(systemName: "clock")
@@ -196,18 +233,18 @@ struct InstanceCardView: View {
     private var actionButton: some View {
         Group {
             if instance.isRunning {
-                // 关闭按钮
+                // 停止按钮（方形图标）
                 Button(action: {
                     onTerminate?()
                 }) {
                     ZStack {
                         Circle()
-                            .fill(isCloseHovered ? AppTheme.Colors.danger : Color.gray.opacity(0.3))
-                            .frame(width: 22, height: 22)
+                            .fill(isCloseHovered ? AppTheme.Colors.danger : Color.white.opacity(0.9))
+                            .frame(width: actionButtonSize, height: actionButtonSize)
 
-                        Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(isCloseHovered ? .white : .secondary)
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: actionButtonSize * 0.4, weight: .semibold))
+                            .foregroundColor(isCloseHovered ? .white : AppTheme.Colors.danger)
                     }
                 }
                 .buttonStyle(.plain)
@@ -217,20 +254,19 @@ struct InstanceCardView: View {
                     }
                 }
                 .help("终止此实例")
-                .opacity(isHovered ? 1 : 0)
             } else {
-                // 启动按钮
+                // 启动按钮（播放图标）
                 Button(action: {
                     onLaunch?()
                 }) {
                     ZStack {
                         Circle()
-                            .fill(isCloseHovered ? AppTheme.Colors.primary : Color.gray.opacity(0.3))
-                            .frame(width: 22, height: 22)
+                            .fill(isCloseHovered ? AppTheme.Colors.primary : Color.white.opacity(0.9))
+                            .frame(width: actionButtonSize, height: actionButtonSize)
 
                         Image(systemName: "play.fill")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(isCloseHovered ? .white : .secondary)
+                            .font(.system(size: actionButtonSize * 0.4, weight: .semibold))
+                            .foregroundColor(isCloseHovered ? .white : AppTheme.Colors.primary)
                     }
                 }
                 .buttonStyle(.plain)
@@ -240,11 +276,9 @@ struct InstanceCardView: View {
                     }
                 }
                 .help("启动此实例")
-                .opacity(isHovered ? 1 : 0)
             }
         }
-        .padding(8)
-        .animation(AppTheme.Animations.fast, value: isHovered)
+        .animation(AppTheme.Animations.fast, value: isCloseHovered)
     }
 
     // MARK: - 卡片背景
@@ -383,9 +417,6 @@ struct InstanceCardView: View {
 /// 显示为带有 + 号的特殊卡片，点击后创建新实例
 struct AddInstanceCardView: View {
 
-    /// 是否正在创建
-    let isLoading: Bool
-
     /// 点击回调
     let onTap: () -> Void
 
@@ -405,22 +436,17 @@ struct AddInstanceCardView: View {
                     )
                     .frame(width: AppTheme.Dimensions.cardIconSize, height: AppTheme.Dimensions.cardIconSize)
 
-                if isLoading {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else {
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundColor(isHovered ? AppTheme.Colors.primary : .secondary)
-                }
+                Image(systemName: "plus")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(isHovered ? AppTheme.Colors.primary : .secondary)
             }
 
             // 文字
-            Text(isLoading ? "正在创建..." : "新建微信")
+            Text("新建微信")
                 .font(AppTheme.Fonts.subtitle)
                 .foregroundColor(isHovered ? AppTheme.Colors.primary : .secondary)
 
-            Text(isLoading ? "请稍候" : "点击启动新实例")
+            Text("点击启动新实例")
                 .font(AppTheme.Fonts.tiny)
                 .foregroundColor(.secondary.opacity(0.7))
 
@@ -439,16 +465,11 @@ struct AddInstanceCardView: View {
         .scaleEffect(isHovered ? 1.03 : 1.0)
         .animation(AppTheme.Animations.spring, value: isHovered)
         .onHover { hovering in
-            if !isLoading {
-                isHovered = hovering
-            }
+            isHovered = hovering
         }
         .onTapGesture {
-            if !isLoading {
-                onTap()
-            }
+            onTap()
         }
-        .disabled(isLoading)
     }
 
     private var addCardBackground: some View {
@@ -485,7 +506,7 @@ struct AddInstanceCardView: View {
             )
         )
 
-        AddInstanceCardView(isLoading: false) {
+        AddInstanceCardView {
             print("新建")
         }
     }

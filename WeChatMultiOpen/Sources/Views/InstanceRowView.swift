@@ -60,7 +60,14 @@ struct InstanceRowView: View {
                             .foregroundColor(.primary)
 
                         // 运行状态标签
-                        if instance.isRunning {
+                        if instance.isCreating {
+                            Text("创建中")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(AppTheme.Colors.primary))
+                        } else if instance.isRunning {
                             Text("运行中")
                                 .font(.system(size: 9, weight: .medium))
                                 .foregroundColor(.white)
@@ -77,7 +84,11 @@ struct InstanceRowView: View {
                         }
                     }
 
-                    if instance.isRunning, let pid = instance.processId {
+                    if instance.isCreating {
+                        Text("请稍候...")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Colors.primary)
+                    } else if instance.isRunning, let pid = instance.processId {
                         Text("PID: \(pid)")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
@@ -131,7 +142,12 @@ struct InstanceRowView: View {
 
             // 操作按钮
             HStack(spacing: 8) {
-                if instance.isRunning {
+                if instance.isCreating {
+                    // 创建中显示进度指示器
+                    ProgressView()
+                        .scaleEffect(0.6)
+                        .frame(width: 14, height: 14)
+                } else if instance.isRunning {
                     // 激活按钮
                     Button(action: {
                         onActivate?()
@@ -166,7 +182,7 @@ struct InstanceRowView: View {
                     .help("启动此实例")
                 }
             }
-            .opacity(isHovered ? 1 : 0.5)
+            .opacity(instance.isCreating ? 1 : (isHovered ? 1 : 0.5))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -176,11 +192,14 @@ struct InstanceRowView: View {
                 .fill(isHovered ? Color.gray.opacity(0.1) : Color.clear)
         )
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovered = hovering
+            if !instance.isCreating {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isHovered = hovering
+                }
             }
         }
         .onTapGesture(count: 2) {
+            guard !instance.isCreating else { return }
             // 双击：运行中的激活窗口，未运行的启动
             if instance.isRunning {
                 onActivate?()
@@ -189,14 +208,18 @@ struct InstanceRowView: View {
             }
         }
         .onTapGesture(count: 1) {
+            guard !instance.isCreating else { return }
             // 单击：运行中的激活窗口
             if instance.isRunning {
                 onActivate?()
             }
         }
         .contextMenu {
-            contextMenuContent
+            if !instance.isCreating {
+                contextMenuContent
+            }
         }
+        .disabled(instance.isCreating)
         .sheet(isPresented: $showRenameAlert) {
             renameSheet
         }
@@ -240,23 +263,33 @@ struct InstanceRowView: View {
     /// 微信图标
     private var wechatIcon: some View {
         ZStack {
-            // 背景圆形
-            Circle()
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: instance.isRunning
-                            ? [Color.green.opacity(0.8), Color.green]
-                            : [Color.gray.opacity(0.5), Color.gray.opacity(0.7)]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 36, height: 36)
+            if instance.isCreating {
+                // 创建中状态 - 显示进度指示器
+                Circle()
+                    .stroke(AppTheme.Colors.primary.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+                    .frame(width: 36, height: 36)
 
-            // 微信图标（使用系统图标模拟）
-            Image(systemName: "message.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+                ProgressView()
+                    .scaleEffect(0.7)
+            } else {
+                // 背景圆形
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: instance.isRunning
+                                ? [Color.green.opacity(0.8), Color.green]
+                                : [Color.gray.opacity(0.5), Color.gray.opacity(0.7)]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 36, height: 36)
+
+                // 微信图标（使用系统图标模拟）
+                Image(systemName: "message.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+            }
         }
     }
 
@@ -326,9 +359,6 @@ struct InstanceRowView: View {
 /// 新建实例行视图
 struct AddInstanceRowView: View {
 
-    /// 是否正在创建
-    let isLoading: Bool
-
     /// 点击回调
     let onTap: () -> Void
 
@@ -346,23 +376,18 @@ struct AddInstanceRowView: View {
                     )
                     .frame(width: 36, height: 36)
 
-                if isLoading {
-                    ProgressView()
-                        .scaleEffect(0.6)
-                } else {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(isHovered ? AppTheme.Colors.primary : .secondary)
-                }
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(isHovered ? AppTheme.Colors.primary : .secondary)
             }
 
             // 文字
             VStack(alignment: .leading, spacing: 2) {
-                Text(isLoading ? "正在创建..." : "新建微信")
+                Text("新建微信")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(isHovered ? AppTheme.Colors.primary : .secondary)
 
-                Text(isLoading ? "请稍候" : "点击启动新实例")
+                Text("点击启动新实例")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary.opacity(0.7))
             }
@@ -377,18 +402,13 @@ struct AddInstanceRowView: View {
                 .fill(isHovered ? AppTheme.Colors.primary.opacity(0.08) : Color.clear)
         )
         .onHover { hovering in
-            if !isLoading {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    isHovered = hovering
-                }
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
             }
         }
         .onTapGesture {
-            if !isLoading {
-                onTap()
-            }
+            onTap()
         }
-        .disabled(isLoading)
     }
 }
 
@@ -428,7 +448,7 @@ struct AddInstanceRowView: View {
         )
 
         // 新建实例行
-        AddInstanceRowView(isLoading: false) {
+        AddInstanceRowView {
             print("新建")
         }
     }

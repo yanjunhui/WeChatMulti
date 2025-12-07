@@ -4,7 +4,20 @@
 
 ![Platform](https://img.shields.io/badge/Platform-macOS%2013.0+-blue)
 ![License](https://img.shields.io/badge/License-Unlicense-green)
-![Version](https://img.shields.io/badge/Version-1.0.0-orange)
+![Version](https://img.shields.io/badge/Version-1.0.3-orange)
+
+## 界面预览
+
+<table>
+  <tr>
+    <td align="center"><img src="Screenshots/main-card.png" width="400"/><br/><b>卡片视图</b></td>
+    <td align="center"><img src="Screenshots/main-list.png" width="400"/><br/><b>列表视图</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="Screenshots/version.png" width="400"/><br/><b>版本管理</b></td>
+    <td align="center"><img src="Screenshots/storage.png" width="400"/><br/><b>存储空间</b></td>
+  </tr>
+</table>
 
 ## 功能特性
 
@@ -14,7 +27,7 @@
 - **数据完全隔离** - 每个实例拥有独立的聊天记录、登录状态和缓存数据
 
 ### 实例管理
-- **实例列表** - 清晰展示所有微信实例的运行状态
+- **双视图模式** - 支持卡片视图和列表视图，自由切换
 - **一键启动/终止** - 快速启动或终止任意微信实例
 - **窗口激活** - 快速将指定微信窗口带到前台（支持最小化和后台状态）
 - **自定义名称** - 为每个实例设置自定义名称，便于区分
@@ -33,6 +46,7 @@
 - **菜单栏快捷操作** - 在菜单栏快速访问常用功能
 - **开机自启** - 支持登录时自动启动
 - **窗口行为** - 可配置关闭窗口时隐藏到菜单栏
+- **自动更新** - 支持检测新版本并提示更新
 
 ## 系统要求
 
@@ -41,19 +55,30 @@
 
 ## 安装方法
 
-1. 下载最新版本的 DMG 文件
-2. 打开 DMG，将「微信多开」拖入「Applications」文件夹
-3. 双击打开应用即可使用
+### 方式一：直接下载
+1. 前往 [Releases](https://github.com/yanjunhui/WeChatMulti/releases) 页面
+2. 下载最新版本的 `WeChatMulti_vX.X.X.dmg` 文件
+3. 打开 DMG，将「微信多开」拖入「应用程序」文件夹
+4. 双击打开应用即可使用
+
+### 方式二：源码编译
+```bash
+git clone https://github.com/yanjunhui/WeChatMulti.git
+cd WeChatMulti
+open WeChatMultiOpen.xcodeproj
+```
+在 Xcode 中编译运行即可。
 
 > 本应用已通过 Apple 开发者证书签名并完成公证（Notarization），可直接运行，无需额外安全设置。
 
 ## 使用说明
 
 1. **启动应用** - 打开「微信多开」应用
-2. **启动微信** - 点击「启动新微信」按钮
+2. **启动微信** - 点击「新建微信」按钮
    - 首次点击：如果没有任何微信在运行，会启动原版微信
    - 再次点击：会自动创建并启动新的微信副本
 3. **管理实例** - 在列表中可以：
+   - 悬停显示操作按钮：启动/停止
    - 单击/双击：激活对应微信窗口
    - 右键菜单：重命名、复制 PID、终止实例等
 
@@ -65,6 +90,31 @@
 2. 修改副本的 Bundle Identifier
 3. 使用 ad-hoc 签名重新签署副本
 4. 每个副本拥有独立的沙盒容器，数据完全隔离
+
+## 更新日志
+
+### v1.0.3 (2024-12-08)
+- 优化实例卡片交互体验
+- 启动/停止按钮移至图标中央，悬停时显示
+- 添加平滑的按钮过渡动画
+- 修复创建实例时图标闪烁问题
+- 修复后台检查更新的线程安全问题
+
+### v1.0.2 (2024-12-07)
+- 重构 UI 为卡片视图，支持列表/卡片切换
+- 添加更新检测小红点提示
+- 优化设置窗口交互
+
+### v1.0.1 (2024-12-06)
+- 修复设置窗口无法关闭的问题
+- 统一更新检测的交互体验
+- 更新应用名称为「微信多开」
+
+### v1.0.0 (2024-12-05)
+- 首次发布
+- 支持微信多开核心功能
+- 版本管理和存储空间管理
+- 菜单栏快捷操作
 
 ## 免责声明
 
