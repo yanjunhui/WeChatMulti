@@ -61,15 +61,15 @@
 3. 打开 DMG，将「微信多开」拖入「应用程序」文件夹
 4. 双击打开应用即可使用
 
+> 本应用已通过 Apple 开发者证书签名并完成公证（Notarization），可直接运行，无需额外安全设置。
+
 ### 方式二：源码编译
 ```bash
 git clone https://github.com/yanjunhui/WeChatMulti.git
 cd WeChatMulti
 open WeChatMultiOpen.xcodeproj
 ```
-在 Xcode 中编译运行即可。
-
-> 本应用已通过 Apple 开发者证书签名并完成公证（Notarization），可直接运行，无需额外安全设置。
+在 Xcode 中编译运行即可(可能需要开发者资质或者个人开发测试证书)。
 
 ## 使用说明
 
