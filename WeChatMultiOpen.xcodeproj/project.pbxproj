@@ -1,0 +1,468 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1000001001 /* WeChatMultiOpenApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001000 /* WeChatMultiOpenApp.swift */; };
+		A1000002001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000 /* ContentView.swift */; };
+		A1000003001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000003000 /* Assets.xcassets */; };
+		A1000004001 /* WeChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004000 /* WeChatManager.swift */; };
+		A1000005001 /* WeChatInstance.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000005000 /* WeChatInstance.swift */; };
+		A1000006001 /* MenuBarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000006000 /* MenuBarManager.swift */; };
+		A1000007001 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000007000 /* LaunchAtLoginManager.swift */; };
+		A1000008001 /* InstanceRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000 /* InstanceRowView.swift */; };
+		A1000009001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000009000 /* SettingsView.swift */; };
+		A1000010001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010000 /* AppDelegate.swift */; };
+		A1000011001 /* MainViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000 /* MainViewModel.swift */; };
+		A1000012001 /* ProcessMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000012000 /* ProcessMonitor.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A1000000000 /* WeChatMultiOpen.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WeChatMultiOpen.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000001000 /* WeChatMultiOpenApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeChatMultiOpenApp.swift; sourceTree = "<group>"; };
+		A1000002000 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1000003000 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1000004000 /* WeChatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeChatManager.swift; sourceTree = "<group>"; };
+		A1000005000 /* WeChatInstance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeChatInstance.swift; sourceTree = "<group>"; };
+		A1000006000 /* MenuBarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarManager.swift; sourceTree = "<group>"; };
+		A1000007000 /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
+		A1000008000 /* InstanceRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstanceRowView.swift; sourceTree = "<group>"; };
+		A1000009000 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A1000010000 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A1000011000 /* MainViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewModel.swift; sourceTree = "<group>"; };
+		A1000012000 /* ProcessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessMonitor.swift; sourceTree = "<group>"; };
+		A1000013000 /* WeChatMultiOpen.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WeChatMultiOpen.entitlements; sourceTree = "<group>"; };
+		A1000014000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000F0000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000G0000 = {
+			isa = PBXGroup;
+			children = (
+				A10000G0001 /* WeChatMultiOpen */,
+				A10000G0002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000G0001 /* WeChatMultiOpen */ = {
+			isa = PBXGroup;
+			children = (
+				A10000G0003 /* Sources/App */,
+				A10000G0004 /* Sources/Views */,
+				A10000G0005 /* Sources/ViewModels */,
+				A10000G0006 /* Sources/Services */,
+				A10000G0007 /* Sources/Models */,
+				A10000G0008 /* Resources */,
+			);
+			path = WeChatMultiOpen;
+			sourceTree = "<group>";
+		};
+		A10000G0002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000 /* WeChatMultiOpen.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A10000G0003 /* Sources/App */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001000 /* WeChatMultiOpenApp.swift */,
+				A1000010000 /* AppDelegate.swift */,
+				A1000013000 /* WeChatMultiOpen.entitlements */,
+				A1000014000 /* Info.plist */,
+			);
+			path = Sources/App;
+			sourceTree = "<group>";
+		};
+		A10000G0004 /* Sources/Views */ = {
+			isa = PBXGroup;
+			children = (
+				A1000002000 /* ContentView.swift */,
+				A1000008000 /* InstanceRowView.swift */,
+				A1000009000 /* SettingsView.swift */,
+			);
+			path = Sources/Views;
+			sourceTree = "<group>";
+		};
+		A10000G0005 /* Sources/ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A1000011000 /* MainViewModel.swift */,
+			);
+			path = Sources/ViewModels;
+			sourceTree = "<group>";
+		};
+		A10000G0006 /* Sources/Services */ = {
+			isa = PBXGroup;
+			children = (
+				A1000004000 /* WeChatManager.swift */,
+				A1000006000 /* MenuBarManager.swift */,
+				A1000007000 /* LaunchAtLoginManager.swift */,
+				A1000012000 /* ProcessMonitor.swift */,
+			);
+			path = Sources/Services;
+			sourceTree = "<group>";
+		};
+		A10000G0007 /* Sources/Models */ = {
+			isa = PBXGroup;
+			children = (
+				A1000005000 /* WeChatInstance.swift */,
+			);
+			path = Sources/Models;
+			sourceTree = "<group>";
+		};
+		A10000G0008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A1000003000 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000N0000 /* WeChatMultiOpen */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000C0002 /* Build configuration list for PBXNativeTarget "WeChatMultiOpen" */;
+			buildPhases = (
+				A10000S0000 /* Sources */,
+				A10000F0000 /* Frameworks */,
+				A10000R0000 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WeChatMultiOpen;
+			productName = WeChatMultiOpen;
+			productReference = A1000000000 /* WeChatMultiOpen.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000P0000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 2610;
+				TargetAttributes = {
+					A10000N0000 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A10000C0001 /* Build configuration list for PBXProject "WeChatMultiOpen" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = "zh-Hans";
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				"zh-Hans",
+				Base,
+			);
+			mainGroup = A10000G0000;
+			productRefGroup = A10000G0002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000N0000 /* WeChatMultiOpen */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000R0000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000003001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000S0000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000001001 /* WeChatMultiOpenApp.swift in Sources */,
+				A1000002001 /* ContentView.swift in Sources */,
+				A1000004001 /* WeChatManager.swift in Sources */,
+				A1000005001 /* WeChatInstance.swift in Sources */,
+				A1000006001 /* MenuBarManager.swift in Sources */,
+				A1000007001 /* LaunchAtLoginManager.swift in Sources */,
+				A1000008001 /* InstanceRowView.swift in Sources */,
+				A1000009001 /* SettingsView.swift in Sources */,
+				A1000010001 /* AppDelegate.swift in Sources */,
+				A1000011001 /* MainViewModel.swift in Sources */,
+				A1000012001 /* ProcessMonitor.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A10000B0001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A10000B0002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		A10000B0003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				AUTOMATION_APPLE_EVENTS = YES;
+				CODE_SIGN_ENTITLEMENTS = WeChatMultiOpen/Sources/App/WeChatMultiOpen.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 8JK4M7W2SP;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WeChatMultiOpen/Sources/App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "微信多开";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Created by Yanjunhui";
+				INFOPLIST_KEY_NSMainNibFile = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yanjunhui.WeChatMultiOpen;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_JIT = YES;
+				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
+				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
+				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A10000B0004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=macosx*]" = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				AUTOMATION_APPLE_EVENTS = YES;
+				CODE_SIGN_ENTITLEMENTS = WeChatMultiOpen/Sources/App/WeChatMultiOpen.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 8JK4M7W2SP;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WeChatMultiOpen/Sources/App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "微信多开";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Created by Yanjunhui";
+				INFOPLIST_KEY_NSMainNibFile = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yanjunhui.WeChatMultiOpen;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_JIT = YES;
+				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
+				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
+				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000C0001 /* Build configuration list for PBXProject "WeChatMultiOpen" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000B0001 /* Debug */,
+				A10000B0002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000C0002 /* Build configuration list for PBXNativeTarget "WeChatMultiOpen" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000B0003 /* Debug */,
+				A10000B0004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A10000P0000 /* Project object */;
+}
