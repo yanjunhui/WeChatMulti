@@ -282,11 +282,10 @@ final class MainViewModel: ObservableObject {
         updateManager.openDownloadPage()
     }
 
-    /// 忽略当前版本更新
+    /// 忽略当前版本的弹窗提醒（但保留更新状态以显示小红点）
     func ignoreCurrentUpdate() {
         updateManager.ignoreCurrentUpdate()
-        hasAvailableUpdate = false
-        availableUpdate = nil
+        // 不再清空 hasAvailableUpdate 和 availableUpdate，保留更新状态
         showUpdateAlert = false
     }
 

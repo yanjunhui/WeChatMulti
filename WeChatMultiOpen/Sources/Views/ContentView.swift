@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// 主内容视图
-/// 应用程序的主界面，显示微信实例列表和操作按钮
+/// 应用程序的主界面，以卡片网格形式显示微信实例
 struct ContentView: View {
 
     // MARK: - 属性
@@ -25,6 +25,14 @@ struct ContentView: View {
     /// 是否显示更新弹窗
     @State private var showUpdateSheet: Bool = false
 
+    /// 是否使用卡片视图模式（false 为列表模式）
+    @State private var isCardViewMode: Bool = true
+
+    /// 网格列定义 - 自适应列数
+    private let gridColumns = [
+        GridItem(.adaptive(minimum: AppTheme.Dimensions.gridMinColumnWidth), spacing: AppTheme.Dimensions.spacing)
+    ]
+
     // MARK: - 视图
 
     var body: some View {
@@ -32,26 +40,21 @@ struct ContentView: View {
             // 头部区域
             headerView
 
-            Divider()
-
             // 主内容区域
             if viewModel.isWeChatInstalled {
-                if viewModel.hasInstances {
-                    instanceListView
-                } else {
-                    emptyStateView
-                }
+                mainContentView
             } else {
                 wechatNotInstalledView
             }
 
-            Divider()
-
-            // 底部操作区域
-            footerView
+            // 底部状态栏
+            footerStatusBar
         }
-        .frame(minWidth: 420, minHeight: 360)
-        .background(Color(NSColor.windowBackgroundColor))
+        .frame(
+            minWidth: AppTheme.Dimensions.windowMinWidth,
+            minHeight: AppTheme.Dimensions.windowMinHeight
+        )
+        .background(windowBackground)
         .alert("错误", isPresented: $viewModel.showError) {
             Button("确定") {
                 viewModel.clearError()
@@ -68,7 +71,7 @@ struct ContentView: View {
             }
         } message: {
             if let instance = viewModel.selectedInstance {
-                Text("确定要终止 \(instance.displayName) 吗？未保存的数据可能会丢失。")
+                Text("确定要终止「\(instance.displayName)」吗？\n未保存的数据可能会丢失。")
             }
         }
         .alert("确认终止所有实例", isPresented: $viewModel.showTerminateAllConfirmation) {
@@ -79,7 +82,7 @@ struct ContentView: View {
                 viewModel.confirmTerminateAllInstances()
             }
         } message: {
-            Text("确定要终止所有 \(viewModel.runningInstanceCount) 个微信实例吗？未保存的数据可能会丢失。")
+            Text("确定要终止所有 \(viewModel.runningInstanceCount) 个微信实例吗？\n未保存的数据可能会丢失。")
         }
         .sheet(isPresented: $viewModel.showDeleteConfirmation) {
             DeleteConfirmationSheet(
@@ -114,81 +117,177 @@ struct ContentView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .showUpdateSheet)) { _ in
-            // 收到通知后显示更新弹窗
             if updateManager.availableUpdate != nil {
                 showUpdateSheet = true
             }
         }
     }
 
-    // MARK: - 子视图
+    // MARK: - 窗口背景
 
-    /// 头部视图
+    private var windowBackground: some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                Rectangle()
+                    .fill(.regularMaterial)
+            } else {
+                GlassBackgroundView(material: .sidebar, blendingMode: .behindWindow)
+            }
+        }
+    }
+
+    // MARK: - 头部视图
+
     private var headerView: some View {
-        HStack {
+        HStack(spacing: AppTheme.Dimensions.spacing) {
             // 应用图标和标题
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 // 应用图标
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.green.opacity(0.7), Color.green]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 40, height: 40)
-
-                    Image(systemName: "square.stack.3d.up.fill")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                }
+                appIcon
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("微信多开")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(AppTheme.Fonts.title)
                         .foregroundColor(.primary)
 
                     Text(viewModel.statusText)
-                        .font(.system(size: 12))
+                        .font(AppTheme.Fonts.caption)
                         .foregroundColor(.secondary)
                 }
             }
 
             Spacer()
 
-            // 刷新按钮
-            Button(action: {
-                viewModel.refreshInstances()
-            }) {
-                Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("刷新实例列表")
+            // 工具按钮组
+            HStack(spacing: 4) {
+                // 切换视图模式按钮
+                Button(action: {
+                    withAnimation(AppTheme.Animations.standard) {
+                        isCardViewMode.toggle()
+                    }
+                }) {
+                    Image(systemName: isCardViewMode ? "list.bullet" : "square.grid.2x2")
+                        .font(.system(size: 14, weight: .medium))
+                }
+                .buttonStyle(IconButtonStyle())
+                .help(isCardViewMode ? "切换到列表视图" : "切换到卡片视图")
 
-            // 设置按钮
-            Button(action: {
-                viewModel.showSettings = true
-            }) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                // 设置按钮
+                Button(action: {
+                    viewModel.showSettings = true
+                }) {
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 14, weight: .medium))
+
+                        // 有更新时显示小红点
+                        if updateManager.hasUpdate {
+                            Circle()
+                                .fill(AppTheme.Colors.danger)
+                                .frame(width: 8, height: 8)
+                                .offset(x: 4, y: -4)
+                        }
+                    }
+                }
+                .buttonStyle(IconButtonStyle())
+                .help(updateManager.hasUpdate ? "设置 (有新版本可用)" : "设置")
             }
-            .buttonStyle(.plain)
-            .help("设置")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(NSColor.controlBackgroundColor))
+        .padding(.horizontal, AppTheme.Dimensions.largePadding)
+        .padding(.vertical, AppTheme.Dimensions.padding)
+        .background(headerBackground)
     }
 
-    /// 实例列表视图
-    private var instanceListView: some View {
+    /// 应用图标
+    private var appIcon: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(AppTheme.Colors.primaryGradient)
+                .frame(width: 42, height: 42)
+
+            Image(systemName: "square.stack.3d.up.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.white)
+        }
+        .shadow(color: AppTheme.Colors.primary.opacity(0.3), radius: 4, x: 0, y: 2)
+    }
+
+    /// 头部背景
+    private var headerBackground: some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+            } else {
+                Rectangle()
+                    .fill(AppTheme.Colors.cardBackground.opacity(0.8))
+            }
+        }
+    }
+
+    // MARK: - 主内容区域
+
+    private var mainContentView: some View {
+        Group {
+            if isCardViewMode {
+                cardGridView
+            } else {
+                listView
+            }
+        }
+    }
+
+    // MARK: - 卡片网格视图
+
+    private var cardGridView: some View {
         ScrollView {
-            LazyVStack(spacing: 4) {
+            LazyVGrid(columns: gridColumns, spacing: AppTheme.Dimensions.spacing) {
+                // 实例卡片
+                ForEach(viewModel.instances) { instance in
+                    InstanceCardView(
+                        instance: instance,
+                        onActivate: {
+                            viewModel.activateInstance(instance)
+                        },
+                        onTerminate: {
+                            viewModel.showTerminateConfirmationDialog(for: instance)
+                        },
+                        onLaunch: {
+                            viewModel.launchInstance(instance)
+                        },
+                        onCopyPID: {
+                            viewModel.copyProcessId(instance)
+                        },
+                        onRename: { newName in
+                            viewModel.renameInstance(instance, to: newName)
+                        },
+                        onDelete: {
+                            viewModel.showDeleteConfirmationDialog(for: instance)
+                        }
+                    )
+                    .transition(.scale.combined(with: .opacity))
+                }
+
+                // 新建实例卡片
+                AddInstanceCardView(
+                    isLoading: viewModel.isLaunching,
+                    onTap: {
+                        viewModel.launchNewInstance()
+                    }
+                )
+                .transition(.scale.combined(with: .opacity))
+            }
+            .padding(AppTheme.Dimensions.largePadding)
+            .animation(AppTheme.Animations.standard, value: viewModel.instances.count)
+        }
+    }
+
+    // MARK: - 列表视图
+
+    private var listView: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                // 实例列表
                 ForEach(viewModel.instances) { instance in
                     InstanceRowView(
                         instance: instance,
@@ -211,114 +310,129 @@ struct ContentView: View {
                             viewModel.showDeleteConfirmationDialog(for: instance)
                         }
                     )
+                    .transition(.opacity)
                 }
+
+                // 新建实例行
+                AddInstanceRowView(
+                    isLoading: viewModel.isLaunching,
+                    onTap: {
+                        viewModel.launchNewInstance()
+                    }
+                )
+                .transition(.opacity)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
+            .padding(AppTheme.Dimensions.padding)
+            .animation(AppTheme.Animations.standard, value: viewModel.instances.count)
         }
     }
 
-    /// 空状态视图（微信已安装但没有运行的实例）
-    private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Spacer()
+    // MARK: - 微信未安装视图
 
-            Image(systemName: "message.badge.circle")
-                .font(.system(size: 48))
-                .foregroundColor(.green.opacity(0.6))
-
-            Text("没有运行中的微信")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.primary)
-
-            Text("点击下方按钮启动微信")
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
-
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    /// 微信未安装视图
     private var wechatNotInstalledView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: AppTheme.Dimensions.largePadding) {
             Spacer()
 
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 48))
-                .foregroundColor(.orange)
+            // 警告图标
+            ZStack {
+                Circle()
+                    .fill(AppTheme.Colors.warning.opacity(0.15))
+                    .frame(width: 80, height: 80)
 
-            Text("未检测到微信应用")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.primary)
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 36))
+                    .foregroundColor(AppTheme.Colors.warning)
+            }
 
-            Text("请先安装微信 Mac 版")
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
+            VStack(spacing: 8) {
+                Text("未检测到微信应用")
+                    .font(AppTheme.Fonts.title)
+                    .foregroundColor(.primary)
+
+                Text("请先安装微信 Mac 版后再使用本工具")
+                    .font(AppTheme.Fonts.body)
+                    .foregroundColor(.secondary)
+            }
 
             Button(action: {
                 viewModel.openWeChatDownloadPage()
             }) {
                 HStack(spacing: 6) {
-                    Image(systemName: "arrow.down.circle")
-                    Text("前往下载")
+                    Image(systemName: "arrow.down.circle.fill")
+                    Text("前往下载微信")
                 }
-                .font(.system(size: 13, weight: .medium))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.green)
+            .buttonStyle(.primary)
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// 底部视图
-    private var footerView: some View {
+    // MARK: - 底部状态栏
+
+    private var footerStatusBar: some View {
         HStack {
-            // 启动新实例按钮
-            Button(action: {
-                viewModel.launchNewInstance()
-            }) {
-                HStack(spacing: 6) {
-                    if viewModel.isLaunching {
-                        ProgressView()
-                            .controlSize(.small)
-                            .scaleEffect(0.7)
-                        Text("正在准备...")
-                    } else {
-                        Image(systemName: "plus.circle.fill")
-                        Text("启动新微信")
-                    }
+            // 运行统计
+            HStack(spacing: 16) {
+                // 运行中数量
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(AppTheme.Colors.success)
+                        .frame(width: 8, height: 8)
+                    Text("\(viewModel.runningInstanceCount) 个运行中")
+                        .font(AppTheme.Fonts.caption)
+                        .foregroundColor(.secondary)
                 }
-                .font(.system(size: 13, weight: .medium))
+
+                // 副本数量
+                if viewModel.copyCount > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 10))
+                        Text("\(viewModel.copyCount) 个副本")
+                            .font(AppTheme.Fonts.caption)
+                    }
+                    .foregroundColor(.secondary)
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.green)
-            .disabled(!viewModel.isWeChatInstalled || viewModel.isLaunching)
-            .help("首次启动新实例需要创建微信副本，可能需要几秒钟")
 
             Spacer()
 
-            // 终止所有按钮
+            // 全部终止按钮
             if viewModel.hasRunningInstances {
                 Button(action: {
                     viewModel.showTerminateAllConfirmationDialog()
                 }) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 4) {
                         Image(systemName: "xmark.circle")
+                            .font(.system(size: 11))
                         Text("全部终止")
+                            .font(AppTheme.Fonts.caption)
                     }
-                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppTheme.Colors.danger)
                 }
-                .buttonStyle(.bordered)
-                .tint(.red)
+                .buttonStyle(.plain)
+                .opacity(0.8)
+                .help("终止所有运行中的微信实例")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(NSColor.controlBackgroundColor))
+        .padding(.horizontal, AppTheme.Dimensions.largePadding)
+        .padding(.vertical, AppTheme.Dimensions.smallPadding + 4)
+        .background(footerBackground)
+    }
+
+    /// 底部背景
+    private var footerBackground: some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+            } else {
+                Rectangle()
+                    .fill(AppTheme.Colors.cardBackground.opacity(0.6))
+            }
+        }
     }
 }
 
@@ -333,26 +447,45 @@ struct DeleteConfirmationSheet: View {
     @State private var isConfirmed: Bool = false
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             // 警告图标
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
-                .foregroundColor(.orange)
+            ZStack {
+                Circle()
+                    .fill(AppTheme.Colors.warning.opacity(0.15))
+                    .frame(width: 64, height: 64)
 
-            // 标题
-            Text("确认删除副本")
-                .font(.system(size: 18, weight: .semibold))
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(AppTheme.Colors.warning)
+            }
 
-            // 说明
-            Text("确定要删除「\(instanceName)」吗？")
-                .font(.system(size: 14))
-                .foregroundColor(.primary)
+            // 标题和说明
+            VStack(spacing: 8) {
+                Text("确认删除副本")
+                    .font(AppTheme.Fonts.title)
 
-            Text("删除后，该副本的所有数据将被永久清除，此操作不可恢复。")
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
+                Text("确定要删除「\(instanceName)」吗？")
+                    .font(AppTheme.Fonts.body)
+                    .foregroundColor(.primary)
+            }
+
+            // 警告信息
+            VStack(spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundColor(AppTheme.Colors.danger)
+                    Text("删除后所有数据将被永久清除")
+                }
+                Text("此操作不可恢复")
+            }
+            .font(AppTheme.Fonts.caption)
+            .foregroundColor(.secondary)
+            .padding(12)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(AppTheme.Colors.danger.opacity(0.08))
+            )
 
             // 确认勾选
             HStack(spacing: 8) {
@@ -360,14 +493,13 @@ struct DeleteConfirmationSheet: View {
                     .toggleStyle(.checkbox)
                     .labelsHidden()
 
-                Text("该微信所有的聊天记录将会被删除，我已知悉")
-                    .font(.system(size: 12))
+                Text("我已了解该微信所有聊天记录将被删除")
+                    .font(AppTheme.Fonts.caption)
                     .foregroundColor(.primary)
             }
-            .padding(.top, 8)
 
             // 按钮
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
                 Button("取消") {
                     onCancel()
                 }
@@ -379,13 +511,12 @@ struct DeleteConfirmationSheet: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
-                .tint(.red)
+                .tint(AppTheme.Colors.danger)
                 .disabled(!isConfirmed)
             }
-            .padding(.top, 8)
         }
-        .padding(30)
-        .frame(width: 400)
+        .padding(32)
+        .frame(width: 380)
     }
 }
 
@@ -397,7 +528,7 @@ struct DeleteConfirmationSheet: View {
 
 #Preview("DeleteConfirmationSheet") {
     DeleteConfirmationSheet(
-        instanceName: "微信",
+        instanceName: "微信副本 1",
         onCancel: {},
         onConfirm: {}
     )

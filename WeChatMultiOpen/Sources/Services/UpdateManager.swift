@@ -127,6 +127,12 @@ final class UpdateManager: ObservableObject {
         return availableUpdate != nil
     }
 
+    /// 当前更新是否被用户忽略弹窗提醒
+    var isUpdateIgnored: Bool {
+        guard let update = availableUpdate else { return false }
+        return ignoredVersion == update.version
+    }
+
     // MARK: - 私有属性
 
     /// 当前应用版本
@@ -204,11 +210,6 @@ final class UpdateManager: ObservableObject {
 
             // 比较版本
             if isNewerVersion(remoteVersion, than: currentVersion) {
-                // 检查是否被用户忽略
-                if ignoredVersion == remoteVersion {
-                    return .upToDate
-                }
-
                 // 解析发布日期
                 let dateFormatter = ISO8601DateFormatter()
                 let publishDate = dateFormatter.date(from: release.publishedAt) ?? Date()
@@ -229,7 +230,14 @@ final class UpdateManager: ObservableObject {
                     assetSize: asset?.size
                 )
 
+                // 始终设置 availableUpdate，以便小红点能正常显示
                 availableUpdate = updateInfo
+
+                // 如果用户忽略了此版本的弹窗提醒，返回 upToDate（不弹窗）
+                if ignoredVersion == remoteVersion {
+                    return .upToDate
+                }
+
                 return .available(updateInfo)
             } else {
                 availableUpdate = nil
@@ -243,7 +251,7 @@ final class UpdateManager: ObservableObject {
 
     /// 静默检查更新（不更新 UI 状态，用于后台检查）
     /// - Parameter includePrerelease: 是否包含预发布版本
-    /// - Returns: 更新信息（如果有可用更新）
+    /// - Returns: 更新信息（如果有可用更新，即使被忽略也会返回）
     func checkForUpdatesSilently(includePrerelease: Bool = false) async -> UpdateInfo? {
         do {
             let release = try await fetchLatestRelease(includePrerelease: includePrerelease)
@@ -253,10 +261,6 @@ final class UpdateManager: ObservableObject {
                 : release.tagName
 
             if isNewerVersion(remoteVersion, than: currentVersion) {
-                if ignoredVersion == remoteVersion {
-                    return nil
-                }
-
                 let dateFormatter = ISO8601DateFormatter()
                 let publishDate = dateFormatter.date(from: release.publishedAt) ?? Date()
 
@@ -265,7 +269,7 @@ final class UpdateManager: ObservableObject {
                     return name.hasSuffix(".dmg") || name.hasSuffix(".zip")
                 }
 
-                return UpdateInfo(
+                let updateInfo = UpdateInfo(
                     version: remoteVersion,
                     releaseNotes: release.body,
                     downloadUrl: release.htmlUrl,
@@ -274,6 +278,10 @@ final class UpdateManager: ObservableObject {
                     assetName: asset?.name,
                     assetSize: asset?.size
                 )
+
+                // 始终设置 availableUpdate，以便小红点能正常显示
+                availableUpdate = updateInfo
+                return updateInfo
             }
         } catch {
             // 静默模式下忽略错误
@@ -937,11 +945,11 @@ final class UpdateManager: ObservableObject {
         }
     }
 
-    /// 忽略当前版本更新
+    /// 忽略当前版本的弹窗提醒（但保留更新状态以显示小红点）
     func ignoreCurrentUpdate() {
         if let update = availableUpdate {
             ignoredVersion = update.version
-            availableUpdate = nil
+            // 不再清空 availableUpdate，保留更新状态以便小红点正常显示
         }
     }
 

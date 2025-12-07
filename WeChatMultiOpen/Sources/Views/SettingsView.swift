@@ -9,7 +9,7 @@ import SwiftUI
 import ServiceManagement
 
 /// 设置视图
-/// 提供应用程序的各项设置选项
+/// 提供应用程序的各项设置选项，采用现代化卡片式设计
 struct SettingsView: View {
 
     // MARK: - 属性
@@ -86,109 +86,47 @@ struct SettingsView: View {
     /// 是否显示更新弹窗
     @State private var showUpdateSheet: Bool = false
 
-    /// 显示已是最新版本状态（检查后短暂显示）
+    /// 显示已是最新版本状态
     @State private var showUpToDate: Bool = false
+
+    /// 当前选中的设置分类
+    @State private var selectedCategory: SettingsCategory = .general
+
+    // MARK: - 设置分类
+
+    enum SettingsCategory: String, CaseIterable {
+        case general = "通用"
+        case window = "窗口"
+        case version = "版本"
+        case storage = "存储"
+        case about = "关于"
+
+        var icon: String {
+            switch self {
+            case .general: return "gearshape"
+            case .window: return "macwindow"
+            case .version: return "arrow.triangle.2.circlepath"
+            case .storage: return "internaldrive"
+            case .about: return "info.circle"
+            }
+        }
+    }
 
     // MARK: - 视图
 
     var body: some View {
-        VStack(spacing: 0) {
-            // 标题栏
-            headerView
+        HStack(spacing: 0) {
+            // 左侧导航栏
+            sidebarView
 
+            // 分隔线
             Divider()
 
-            // 设置内容
-            ScrollView {
-                VStack(spacing: 20) {
-                    // 通用设置
-                    settingsSection(title: "通用", icon: "gearshape") {
-                        settingsToggle(
-                            title: "开机时自动启动",
-                            description: "登录系统时自动启动微信多开助手",
-                            isOn: $launchAtLogin
-                        )
-                        .onChange(of: launchAtLogin) { newValue in
-                            launchManager.setLaunchAtLogin(enabled: newValue)
-                        }
-
-                        Divider()
-                            .padding(.vertical, 4)
-
-                        settingsToggle(
-                            title: "启动时检查微信状态",
-                            description: "应用启动时自动检查当前运行的微信实例",
-                            isOn: $checkWeChatOnLaunch
-                        )
-                    }
-
-                    // 窗口设置
-                    settingsSection(title: "窗口", icon: "macwindow") {
-                        settingsToggle(
-                            title: "显示菜单栏图标",
-                            description: "在菜单栏显示快捷操作图标",
-                            isOn: $showMenuBarIcon
-                        )
-
-                        Divider()
-                            .padding(.vertical, 4)
-
-                        settingsToggle(
-                            title: "关闭窗口时隐藏到菜单栏",
-                            description: "关闭主窗口时不退出应用，保留菜单栏图标",
-                            isOn: $hideToMenuBarOnClose
-                        )
-                        .disabled(!showMenuBarIcon)
-
-                        Divider()
-                            .padding(.vertical, 4)
-
-                        settingsToggle(
-                            title: "启动后自动隐藏主窗口",
-                            description: "应用启动后自动隐藏主窗口，只显示菜单栏图标",
-                            isOn: $hideWindowOnLaunch
-                        )
-                        .disabled(!showMenuBarIcon)
-
-                        Divider()
-                            .padding(.vertical, 4)
-
-                        settingsToggle(
-                            title: "启动时检查更新",
-                            description: "应用启动时自动检查 GitHub 上是否有新版本",
-                            isOn: $checkUpdateOnLaunch
-                        )
-                    }
-
-                    // 安全设置
-                    settingsSection(title: "安全", icon: "shield") {
-                        settingsToggle(
-                            title: "终止实例前确认",
-                            description: "终止微信实例前显示确认对话框",
-                            isOn: $confirmBeforeTerminate
-                        )
-                    }
-
-                    // 版本管理
-                    settingsSection(title: "版本管理", icon: "arrow.triangle.2.circlepath") {
-                        versionManagementContent
-                    }
-
-                    // 存储空间管理
-                    settingsSection(title: "存储空间", icon: "internaldrive") {
-                        storageManagementContent
-                    }
-
-                    // 关于
-                    settingsSection(title: "关于", icon: "info.circle") {
-                        aboutContent
-                    }
-                }
-                .padding(20)
-            }
+            // 右侧内容区域
+            contentView
         }
-        .frame(width: 480, height: 640)
-        .background(Color(NSColor.windowBackgroundColor))
+        .frame(width: 640, height: 520)
+        .background(settingsBackground)
         .onAppear {
             calculateStorage()
             checkOutdatedCopies()
@@ -249,316 +187,461 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - 子视图
+    // MARK: - 背景
 
-    /// 标题栏
-    private var headerView: some View {
-        HStack {
-            Text("设置")
-                .font(.system(size: 16, weight: .semibold))
-
-            Spacer()
-
-            Button(action: {
-                dismiss()
-            }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.secondary)
+    private var settingsBackground: some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                Rectangle()
+                    .fill(.regularMaterial)
+            } else {
+                Color(NSColor.windowBackgroundColor)
             }
-            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(Color(NSColor.controlBackgroundColor))
     }
 
-    /// 设置区块
-    private func settingsSection<Content: View>(
-        title: String,
-        icon: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // 区块标题
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.primary)
+    // MARK: - 左侧导航栏
 
-                Text(title)
-                    .font(.system(size: 13, weight: .bold))
+    /// 关闭按钮悬停状态
+    @State private var isCloseButtonHovered: Bool = false
+
+    private var sidebarView: some View {
+        VStack(spacing: 4) {
+            // 系统风格关闭按钮 - 位于左上角（与系统窗口按钮位置一致）
+            HStack {
+                Button(action: {
+                    dismiss()
+                }) {
+                    ZStack {
+                        Circle()
+                            .fill(Color(red: 1.0, green: 0.38, blue: 0.34))
+                            .frame(width: 12, height: 12)
+
+                        if isCloseButtonHovered {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(Color(red: 0.4, green: 0.0, blue: 0.0))
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .onHover { hovering in
+                    isCloseButtonHovered = hovering
+                }
+                .help("关闭设置")
+
+                Spacer()
+            }
+            .padding(.leading, 13)
+            .padding(.top, 12)
+
+            // 标题
+            HStack {
+                Text("设置")
+                    .font(AppTheme.Fonts.title)
                     .foregroundColor(.primary)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+
+            // 导航项
+            ForEach(SettingsCategory.allCases, id: \.self) { category in
+                sidebarItem(category)
             }
 
-            // 区块内容
-            VStack(alignment: .leading, spacing: 0) {
-                content()
+            Spacer()
+        }
+        .frame(width: 160)
+        .background(sidebarBackground)
+    }
+
+    private func sidebarItem(_ category: SettingsCategory) -> some View {
+        Button(action: {
+            withAnimation(AppTheme.Animations.fast) {
+                selectedCategory = category
             }
-            .padding(12)
+        }) {
+            HStack(spacing: 10) {
+                Image(systemName: category.icon)
+                    .font(.system(size: 14))
+                    .frame(width: 20)
+
+                Text(category.rawValue)
+                    .font(AppTheme.Fonts.body)
+
+                Spacer()
+
+                // 关于页面有更新时显示小红点
+                if category == .about && updateManager.hasUpdate {
+                    Circle()
+                        .fill(AppTheme.Colors.danger)
+                        .frame(width: 8, height: 8)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(NSColor.controlBackgroundColor))
+                    .fill(selectedCategory == category ? AppTheme.Colors.primary.opacity(0.15) : Color.clear)
             )
+            .foregroundColor(selectedCategory == category ? AppTheme.Colors.primary : .primary)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 8)
+    }
+
+    private var sidebarBackground: some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+            } else {
+                Rectangle()
+                    .fill(AppTheme.Colors.cardBackground.opacity(0.5))
+            }
         }
     }
 
-    /// 设置开关项
-    private func settingsToggle(
-        title: String,
-        description: String,
-        isOn: Binding<Bool>
-    ) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.primary)
+    // MARK: - 右侧内容区域
 
-                Text(description)
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
+    private var contentView: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                switch selectedCategory {
+                case .general:
+                    generalSettings
+                case .window:
+                    windowSettings
+                case .version:
+                    versionSettings
+                case .storage:
+                    storageSettings
+                case .about:
+                    aboutSettings
+                }
             }
+            .padding(24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 
-            Spacer()
+    // MARK: - 通用设置
 
-            Toggle("", isOn: isOn)
-                .toggleStyle(.switch)
-                .controlSize(.small)
+    private var generalSettings: some View {
+        VStack(spacing: 16) {
+            settingsSectionHeader(title: "通用设置", icon: "gearshape")
+
+            settingsCard {
+                VStack(spacing: 0) {
+                    settingsToggleRow(
+                        title: "开机时自动启动",
+                        description: "登录系统时自动启动微信多开助手",
+                        icon: "power",
+                        isOn: $launchAtLogin
+                    )
+                    .onChange(of: launchAtLogin) { newValue in
+                        launchManager.setLaunchAtLogin(enabled: newValue)
+                    }
+
+                    settingsDivider
+
+                    settingsToggleRow(
+                        title: "启动时检查微信状态",
+                        description: "应用启动时自动检查当前运行的微信实例",
+                        icon: "checkmark.circle",
+                        isOn: $checkWeChatOnLaunch
+                    )
+
+                    settingsDivider
+
+                    settingsToggleRow(
+                        title: "终止实例前确认",
+                        description: "终止微信实例前显示确认对话框",
+                        icon: "exclamationmark.shield",
+                        isOn: $confirmBeforeTerminate
+                    )
+                }
+            }
         }
     }
 
-    /// 版本管理内容
-    private var versionManagementContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // 原版微信版本
-            HStack {
-                Text("原版微信版本")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+    // MARK: - 窗口设置
 
-                Spacer()
+    private var windowSettings: some View {
+        VStack(spacing: 16) {
+            settingsSectionHeader(title: "窗口设置", icon: "macwindow")
 
-                Text(wechatManager.getOriginalWeChatVersion() ?? "未安装")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.primary)
+            settingsCard {
+                VStack(spacing: 0) {
+                    settingsToggleRow(
+                        title: "显示菜单栏图标",
+                        description: "在菜单栏显示快捷操作图标",
+                        icon: "menubar.rectangle",
+                        isOn: $showMenuBarIcon
+                    )
+
+                    settingsDivider
+
+                    settingsToggleRow(
+                        title: "关闭窗口时隐藏到菜单栏",
+                        description: "关闭主窗口时不退出应用，保留菜单栏图标",
+                        icon: "eye.slash",
+                        isOn: $hideToMenuBarOnClose,
+                        disabled: !showMenuBarIcon
+                    )
+
+                    settingsDivider
+
+                    settingsToggleRow(
+                        title: "启动后自动隐藏主窗口",
+                        description: "应用启动后自动隐藏主窗口，只显示菜单栏图标",
+                        icon: "rectangle.on.rectangle.slash",
+                        isOn: $hideWindowOnLaunch,
+                        disabled: !showMenuBarIcon
+                    )
+
+                    settingsDivider
+
+                    settingsToggleRow(
+                        title: "启动时检查更新",
+                        description: "应用启动时自动检查 GitHub 上是否有新版本",
+                        icon: "arrow.down.circle",
+                        isOn: $checkUpdateOnLaunch
+                    )
+                }
             }
+        }
+    }
 
-            Divider()
+    // MARK: - 版本管理
 
-            // 克隆体状态
-            HStack {
-                Text("克隆体状态")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+    private var versionSettings: some View {
+        VStack(spacing: 16) {
+            settingsSectionHeader(title: "版本管理", icon: "arrow.triangle.2.circlepath")
 
-                Spacer()
+            // 版本信息卡片
+            settingsCard {
+                VStack(spacing: 0) {
+                    // 原版微信版本
+                    settingsInfoRow(
+                        title: "原版微信版本",
+                        value: wechatManager.getOriginalWeChatVersion() ?? "未安装",
+                        icon: "app.badge"
+                    )
 
-                if wechatManager.availableCopies.isEmpty {
-                    Text("无克隆体")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                } else if outdatedCount > 0 {
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.circle.fill")
-                            .foregroundColor(.orange)
-                        Text("\(outdatedCount) 个需要升级")
-                            .foregroundColor(.orange)
+                    settingsDivider
+
+                    // 克隆体状态
+                    HStack {
+                        HStack(spacing: 8) {
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppTheme.Colors.primary)
+                                .frame(width: 24)
+
+                            Text("克隆体状态")
+                                .font(AppTheme.Fonts.body)
+                        }
+
+                        Spacer()
+
+                        if wechatManager.availableCopies.isEmpty {
+                            Text("无克隆体")
+                                .font(AppTheme.Fonts.body)
+                                .foregroundColor(.secondary)
+                        } else if outdatedCount > 0 {
+                            HStack(spacing: 4) {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundColor(AppTheme.Colors.warning)
+                                Text("\(outdatedCount) 个需要升级")
+                                    .foregroundColor(AppTheme.Colors.warning)
+                            }
+                            .font(AppTheme.Fonts.body)
+                        } else {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(AppTheme.Colors.success)
+                                Text("全部最新")
+                                    .foregroundColor(AppTheme.Colors.success)
+                            }
+                            .font(AppTheme.Fonts.body)
+                        }
                     }
-                    .font(.system(size: 13, weight: .medium))
-                } else {
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                        Text("全部最新")
-                            .foregroundColor(.green)
-                    }
-                    .font(.system(size: 13, weight: .medium))
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
                 }
             }
 
-            // 克隆体版本列表（如果有过期的）
+            // 克隆体列表
             if !wechatManager.availableCopies.isEmpty {
-                Divider()
-
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(wechatManager.availableCopies, id: \.id) { copy in
-                        HStack {
-                            Text(wechatManager.customNames[copy.bundleIdentifier] ?? copy.name)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-
-                            Spacer()
+                settingsCard {
+                    VStack(spacing: 0) {
+                        ForEach(Array(wechatManager.availableCopies.enumerated()), id: \.element.id) { index, copy in
+                            if index > 0 {
+                                settingsDivider
+                            }
 
                             let copyVersion = wechatManager.getCopyVersion(copy) ?? "未知"
                             let isOutdated = copyVersion != (wechatManager.getOriginalWeChatVersion() ?? "")
 
-                            Text(copyVersion)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(isOutdated ? .orange : .primary)
+                            HStack {
+                                Text(wechatManager.customNames[copy.bundleIdentifier] ?? copy.name)
+                                    .font(AppTheme.Fonts.body)
+                                    .foregroundColor(.primary)
 
-                            if isOutdated {
-                                Image(systemName: "arrow.up.circle")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.orange)
+                                Spacer()
+
+                                HStack(spacing: 6) {
+                                    Text(copyVersion)
+                                        .font(AppTheme.Fonts.body)
+                                        .foregroundColor(isOutdated ? AppTheme.Colors.warning : .secondary)
+
+                                    if isOutdated {
+                                        Image(systemName: "arrow.up.circle.fill")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(AppTheme.Colors.warning)
+                                    }
+                                }
                             }
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 16)
                         }
                     }
                 }
             }
 
-            Divider()
-
             // 操作按钮
-            HStack {
+            HStack(spacing: 12) {
                 Button(action: {
                     checkOutdatedCopies()
                 }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         Image(systemName: "arrow.clockwise")
                         Text("检查更新")
                     }
-                    .font(.system(size: 12))
+                    .font(AppTheme.Fonts.body)
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.small)
 
                 Spacer()
 
                 Button(action: {
                     showUpgradeConfirmation = true
                 }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         if isUpgrading {
                             ProgressView()
                                 .controlSize(.small)
-                                .scaleEffect(0.7)
+                                .scaleEffect(0.8)
                         } else {
-                            Image(systemName: "arrow.up.circle")
+                            Image(systemName: "arrow.up.circle.fill")
                         }
                         Text("升级全部克隆体")
                     }
-                    .font(.system(size: 12))
+                    .font(AppTheme.Fonts.body)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.blue)
-                .controlSize(.small)
+                .tint(AppTheme.Colors.primary)
                 .disabled(outdatedCount == 0 || isUpgrading)
             }
 
             // 提示信息
-            Text("升级会保留所有聊天记录和登录状态")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
+            HStack(spacing: 6) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 11))
+                Text("升级会保留所有聊天记录和登录状态")
+                    .font(AppTheme.Fonts.caption)
+            }
+            .foregroundColor(.secondary)
         }
     }
 
-    /// 存储空间管理内容
-    private var storageManagementContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // 克隆体数量
-            HStack {
-                Text("克隆体数量")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+    // MARK: - 存储设置
 
-                Spacer()
+    private var storageSettings: some View {
+        VStack(spacing: 16) {
+            settingsSectionHeader(title: "存储空间", icon: "internaldrive")
 
-                Text("\(wechatManager.availableCopies.count) 个")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.primary)
-            }
+            settingsCard {
+                VStack(spacing: 0) {
+                    // 克隆体数量
+                    settingsInfoRow(
+                        title: "克隆体数量",
+                        value: "\(wechatManager.availableCopies.count) 个",
+                        icon: "doc.on.doc"
+                    )
 
-            Divider()
+                    settingsDivider
 
-            // 存储空间统计
-            if isCalculatingStorage {
-                HStack {
-                    Text("正在计算存储空间...")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
+                    // 存储空间统计
+                    if isCalculatingStorage {
+                        HStack {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .scaleEffect(0.8)
+                                Text("正在计算存储空间...")
+                                    .font(AppTheme.Fonts.body)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                    } else if let stats = storageStats {
+                        settingsInfoRow(
+                            title: "克隆体应用",
+                            value: stats.formattedCopiesSize,
+                            icon: "app"
+                        )
 
-                    Spacer()
+                        settingsDivider
 
-                    ProgressView()
-                        .controlSize(.small)
-                        .scaleEffect(0.8)
-                }
-            } else if let stats = storageStats {
-                // 克隆体应用大小
-                HStack {
-                    Text("克隆体应用")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
+                        settingsInfoRow(
+                            title: "聊天记录及缓存",
+                            value: stats.formattedContainerSize,
+                            icon: "message"
+                        )
 
-                    Spacer()
+                        settingsDivider
 
-                    Text(stats.formattedCopiesSize)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.primary)
-                }
+                        HStack {
+                            HStack(spacing: 8) {
+                                Image(systemName: "chart.pie")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(AppTheme.Colors.warning)
+                                    .frame(width: 24)
 
-                Divider()
+                                Text("总占用空间")
+                                    .font(AppTheme.Fonts.subtitle)
+                            }
 
-                // 聊天数据大小
-                HStack {
-                    Text("聊天记录及缓存")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
+                            Spacer()
 
-                    Spacer()
-
-                    Text(stats.formattedContainerSize)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.primary)
-                }
-
-                Divider()
-
-                // 总占用空间
-                HStack {
-                    Text("总占用空间")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.primary)
-
-                    Spacer()
-
-                    Text(stats.formattedTotalSize)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.orange)
-                }
-            } else {
-                HStack {
-                    Text("存储空间")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-
-                    Spacer()
-
-                    Button("计算") {
-                        calculateStorage()
+                            Text(stats.formattedTotalSize)
+                                .font(AppTheme.Fonts.subtitle)
+                                .foregroundColor(AppTheme.Colors.warning)
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
                 }
             }
-
-            Divider()
 
             // 操作按钮
-            HStack {
+            HStack(spacing: 12) {
                 Button(action: {
                     calculateStorage()
                 }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         Image(systemName: "arrow.clockwise")
                         Text("刷新")
                     }
-                    .font(.system(size: 12))
+                    .font(AppTheme.Fonts.body)
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.small)
                 .disabled(isCalculatingStorage)
 
                 Spacer()
@@ -566,154 +649,282 @@ struct SettingsView: View {
                 Button(action: {
                     showClearConfirmation = true
                 }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         if isClearing {
                             ProgressView()
                                 .controlSize(.small)
-                                .scaleEffect(0.7)
+                                .scaleEffect(0.8)
                         } else {
                             Image(systemName: "trash")
                         }
                         Text("清空所有克隆数据")
                     }
-                    .font(.system(size: 12))
+                    .font(AppTheme.Fonts.body)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.red)
-                .controlSize(.small)
+                .tint(AppTheme.Colors.danger)
                 .disabled(wechatManager.availableCopies.isEmpty || isClearing)
             }
         }
     }
 
-    /// 关于内容
-    private var aboutContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("当前版本")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+    // MARK: - 关于设置
 
-                Spacer()
+    private var aboutSettings: some View {
+        VStack(spacing: 16) {
+            settingsSectionHeader(title: "关于", icon: "info.circle")
 
-                Text(updateManager.getCurrentVersion())
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.primary)
-            }
+            // 应用信息卡片
+            settingsCard {
+                VStack(spacing: 16) {
+                    // 应用图标和名称
+                    HStack(spacing: 16) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(AppTheme.Colors.primaryGradient)
+                                .frame(width: 64, height: 64)
 
-            Divider()
-
-            // 更新检查
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("检查更新")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-
-                    if showUpToDate {
-                        // 已是最新版本状态
-                        HStack(spacing: 4) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 9))
-                            Text("已是最新版本")
+                            Image(systemName: "square.stack.3d.up.fill")
+                                .font(.system(size: 28, weight: .semibold))
+                                .foregroundColor(.white)
                         }
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.green)
-                    } else if let lastCheck = updateManager.getFormattedLastCheckTime() {
-                        Text("上次检查: \(lastCheck)")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary.opacity(0.7))
+                        .shadow(color: AppTheme.Colors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("微信多开")
+                                .font(AppTheme.Fonts.title)
+
+                            Text("版本 \(updateManager.getCurrentVersion())")
+                                .font(AppTheme.Fonts.body)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+
+                    Divider()
+                        .padding(.horizontal, 16)
+
+                    // 更新检查
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("检查更新")
+                                .font(AppTheme.Fonts.body)
+
+                            if updateManager.hasUpdate, let update = updateManager.availableUpdate {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(AppTheme.Colors.danger)
+                                        .frame(width: 6, height: 6)
+                                    Text("发现新版本 v\(update.version)")
+                                }
+                                .font(AppTheme.Fonts.caption)
+                                .foregroundColor(AppTheme.Colors.danger)
+                            } else if showUpToDate {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 10))
+                                    Text("已是最新版本")
+                                }
+                                .font(AppTheme.Fonts.caption)
+                                .foregroundColor(AppTheme.Colors.success)
+                            } else if let lastCheck = updateManager.getFormattedLastCheckTime() {
+                                Text("上次检查: \(lastCheck)")
+                                    .font(AppTheme.Fonts.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        if updateManager.isChecking {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else if updateManager.hasUpdate, let update = updateManager.availableUpdate {
+                            Button(action: {
+                                showUpdateSheet = true
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.down.circle.fill")
+                                    Text("v\(update.version) 可用")
+                                }
+                                .font(AppTheme.Fonts.body)
+                                .foregroundColor(AppTheme.Colors.success)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            Button(action: {
+                                checkForAppUpdate()
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.clockwise")
+                                    Text("检查")
+                                }
+                                .font(AppTheme.Fonts.body)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+
+                    Divider()
+                        .padding(.horizontal, 16)
+
+                    // 开发者信息
+                    HStack {
+                        Text("开发者")
+                            .font(AppTheme.Fonts.body)
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Image("github")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 20, height: 20)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if let url = URL(string: "https://github.com/yanjunhui/WeChatMulti") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .help("访问 GitHub 项目主页")
                 }
-
-                Spacer()
-
-                if updateManager.isChecking {
-                    ProgressView()
-                        .controlSize(.small)
-                        .scaleEffect(0.8)
-                } else if updateManager.hasUpdate, let update = updateManager.availableUpdate {
-                    Button(action: {
-                        showUpdateSheet = true
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.down.circle.fill")
-                                .foregroundColor(.green)
-                            Text("v\(update.version) 可用")
-                                .foregroundColor(.green)
-                        }
-                        .font(.system(size: 12, weight: .medium))
-                    }
-                    .buttonStyle(.plain)
-                } else if showUpToDate {
-                    // 已是最新，显示绿色勾
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                        Text("最新")
-                            .foregroundColor(.green)
-                    }
-                    .font(.system(size: 12, weight: .medium))
-                } else {
-                    Button(action: {
-                        checkForAppUpdate()
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.clockwise")
-                            Text("检查")
-                        }
-                        .font(.system(size: 12))
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
             }
-
-            Divider()
-
-            HStack {
-                Text("开发者")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                Text("Yanjunhui")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.primary)
-            }
-
-            Divider()
 
             // 免责声明
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.orange)
-                    Text("免责声明")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.primary)
-                }
+            settingsCard {
+                VStack(spacing: 12) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppTheme.Colors.warning)
+                        Text("免责声明")
+                            .font(AppTheme.Fonts.subtitle)
+                    }
 
-                VStack(alignment: .leading, spacing: 8) {
                     Text("本应用只是为了方便启动多个微信，仅仅是对微信应用做了一个完整复制，没有对微信程序本身做任何修改，而且多个克隆体之间完全数据隔离，理论上没有任何安全风险。")
-                        .font(.system(size: 11))
+                        .font(AppTheme.Fonts.caption)
                         .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
 
                     Text("但是最终解释权归腾讯所有，个人不承担任何账号安全相关责任，如有侵权，强大的腾讯法务请速联系 i@yanjunhui.com，我将速删!")
-                        .font(.system(size: 11))
+                        .font(AppTheme.Fonts.caption)
                         .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
                 }
-                .lineSpacing(2)
+                .frame(maxWidth: .infinity)
+                .padding(16)
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.orange.opacity(0.06))
-            )
         }
+    }
+
+    // MARK: - 可复用组件
+
+    /// 设置区块标题
+    private func settingsSectionHeader(title: String, icon: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(AppTheme.Colors.primary)
+
+            Text(title)
+                .font(AppTheme.Fonts.largeTitle)
+
+            Spacer()
+        }
+    }
+
+    /// 设置卡片容器
+    private func settingsCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .background(cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
+    }
+
+    private var cardBackground: some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.regularMaterial)
+            } else {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(AppTheme.Colors.cardBackground)
+            }
+        }
+    }
+
+    /// 设置开关行
+    private func settingsToggleRow(
+        title: String,
+        description: String,
+        icon: String,
+        isOn: Binding<Bool>,
+        disabled: Bool = false
+    ) -> some View {
+        HStack {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(disabled ? .secondary.opacity(0.5) : AppTheme.Colors.primary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(AppTheme.Fonts.body)
+                        .foregroundColor(disabled ? .secondary : .primary)
+
+                    Text(description)
+                        .font(AppTheme.Fonts.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+            }
+
+            Spacer()
+
+            Toggle("", isOn: isOn)
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .disabled(disabled)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+    }
+
+    /// 设置信息行
+    private func settingsInfoRow(title: String, value: String, icon: String) -> some View {
+        HStack {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(AppTheme.Colors.primary)
+                    .frame(width: 24)
+
+                Text(title)
+                    .font(AppTheme.Fonts.body)
+            }
+
+            Spacer()
+
+            Text(value)
+                .font(AppTheme.Fonts.body)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+    }
+
+    /// 设置分隔线
+    private var settingsDivider: some View {
+        Divider()
+            .padding(.leading, 48)
     }
 
     // MARK: - 私有方法
@@ -735,9 +946,7 @@ struct SettingsView: View {
         wechatManager.clearAllCloneData { success, errorMessage in
             isClearing = false
             if success {
-                // 重新计算存储空间
                 calculateStorage()
-                // 更新过期计数
                 checkOutdatedCopies()
             } else {
                 clearErrorMessage = errorMessage
@@ -777,10 +986,7 @@ struct SettingsView: View {
 
     /// 检查应用更新
     private func checkForAppUpdate() {
-        // 重置状态
         showUpToDate = false
-
-        // 手动检查时清除之前忽略的版本状态
         updateManager.resetIgnoredVersion()
 
         Task {
@@ -790,14 +996,11 @@ struct SettingsView: View {
             case .available:
                 showUpdateSheet = true
             case .upToDate:
-                // 显示已是最新版本
                 showUpToDate = true
-                // 5秒后恢复显示检查按钮
                 DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
                     showUpToDate = false
                 }
             case .error:
-                // 错误情况，不做特殊处理
                 break
             }
         }
@@ -806,7 +1009,6 @@ struct SettingsView: View {
 
 // MARK: - 升级确认弹窗
 
-/// 升级确认弹窗
 struct UpgradeConfirmationSheet: View {
     let outdatedCount: Int
     let originalVersion: String
@@ -814,40 +1016,41 @@ struct UpgradeConfirmationSheet: View {
     let onConfirm: () -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             // 图标
-            Image(systemName: "arrow.up.circle.fill")
-                .font(.system(size: 48))
-                .foregroundColor(.blue)
+            ZStack {
+                Circle()
+                    .fill(AppTheme.Colors.info.opacity(0.15))
+                    .frame(width: 64, height: 64)
+
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(AppTheme.Colors.info)
+            }
 
             // 标题
-            Text("升级克隆体")
-                .font(.system(size: 18, weight: .semibold))
-
-            // 说明
             VStack(spacing: 8) {
-                Text("将 \(outdatedCount) 个克隆体升级到最新版本")
-                    .font(.system(size: 14))
-                    .foregroundColor(.primary)
+                Text("升级克隆体")
+                    .font(AppTheme.Fonts.title)
 
-                Text("目标版本: \(originalVersion)")
-                    .font(.system(size: 13))
+                Text("将 \(outdatedCount) 个克隆体升级到 \(originalVersion)")
+                    .font(AppTheme.Fonts.body)
                     .foregroundColor(.secondary)
             }
 
             // 提示信息
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Label("聊天记录将完整保留", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppTheme.Colors.success)
                 Label("登录状态将完整保留", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppTheme.Colors.success)
                 Label("需要先终止运行中的克隆体", systemImage: "info.circle.fill")
-                    .foregroundColor(.orange)
+                    .foregroundColor(AppTheme.Colors.warning)
             }
-            .font(.system(size: 13))
+            .font(AppTheme.Fonts.body)
 
             // 按钮
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
                 Button("取消") {
                     onCancel()
                 }
@@ -859,18 +1062,16 @@ struct UpgradeConfirmationSheet: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
-                .tint(.blue)
+                .tint(AppTheme.Colors.primary)
             }
-            .padding(.top, 8)
         }
-        .padding(30)
+        .padding(32)
         .frame(width: 380)
     }
 }
 
 // MARK: - 清空数据确认弹窗
 
-/// 清空数据确认弹窗
 struct ClearDataConfirmationSheet: View {
     let onCancel: () -> Void
     let onConfirm: () -> Void
@@ -878,34 +1079,46 @@ struct ClearDataConfirmationSheet: View {
     @State private var isConfirmed: Bool = false
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             // 警告图标
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
-                .foregroundColor(.red)
+            ZStack {
+                Circle()
+                    .fill(AppTheme.Colors.danger.opacity(0.15))
+                    .frame(width: 64, height: 64)
 
-            // 标题
-            Text("确认清空所有克隆数据")
-                .font(.system(size: 18, weight: .semibold))
-
-            // 说明
-            VStack(spacing: 8) {
-                Text("此操作将删除：")
-                    .font(.system(size: 14))
-                    .foregroundColor(.primary)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Label("所有微信克隆体应用", systemImage: "app.badge.checkmark")
-                    Label("所有克隆体的聊天记录", systemImage: "message")
-                    Label("所有克隆体的缓存数据", systemImage: "folder")
-                }
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(AppTheme.Colors.danger)
             }
 
+            // 标题
+            VStack(spacing: 8) {
+                Text("确认清空所有克隆数据")
+                    .font(AppTheme.Fonts.title)
+
+                Text("此操作将删除所有微信克隆体和相关数据")
+                    .font(AppTheme.Fonts.body)
+                    .foregroundColor(.secondary)
+            }
+
+            // 警告列表
+            VStack(alignment: .leading, spacing: 6) {
+                Label("所有微信克隆体应用", systemImage: "app.badge.checkmark")
+                Label("所有克隆体的聊天记录", systemImage: "message")
+                Label("所有克隆体的缓存数据", systemImage: "folder")
+            }
+            .font(AppTheme.Fonts.body)
+            .foregroundColor(.secondary)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(AppTheme.Colors.danger.opacity(0.08))
+            )
+
             Text("此操作不可恢复！")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.red)
+                .font(AppTheme.Fonts.subtitle)
+                .foregroundColor(AppTheme.Colors.danger)
 
             // 确认勾选
             HStack(spacing: 8) {
@@ -913,14 +1126,12 @@ struct ClearDataConfirmationSheet: View {
                     .toggleStyle(.checkbox)
                     .labelsHidden()
 
-                Text("将清空所有微信克隆及相关数据，无法恢复")
-                    .font(.system(size: 12))
-                    .foregroundColor(.primary)
+                Text("我已了解将清空所有微信克隆及相关数据")
+                    .font(AppTheme.Fonts.caption)
             }
-            .padding(.top, 8)
 
             // 按钮
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
                 Button("取消") {
                     onCancel()
                 }
@@ -932,19 +1143,17 @@ struct ClearDataConfirmationSheet: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
-                .tint(.red)
+                .tint(AppTheme.Colors.danger)
                 .disabled(!isConfirmed)
             }
-            .padding(.top, 8)
         }
-        .padding(30)
+        .padding(32)
         .frame(width: 420)
     }
 }
 
 // MARK: - 更新可用弹窗
 
-/// 更新可用弹窗
 struct UpdateAvailableSheet: View {
     let updateInfo: UpdateInfo
     let onDismiss: () -> Void
@@ -954,31 +1163,37 @@ struct UpdateAvailableSheet: View {
     @StateObject private var updateManager = UpdateManager.shared
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             // 图标
-            Image(systemName: "arrow.down.app.fill")
-                .font(.system(size: 48))
-                .foregroundColor(.blue)
+            ZStack {
+                Circle()
+                    .fill(AppTheme.Colors.info.opacity(0.15))
+                    .frame(width: 64, height: 64)
+
+                Image(systemName: "arrow.down.app.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(AppTheme.Colors.info)
+            }
 
             // 标题
             VStack(spacing: 4) {
                 Text("发现新版本")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(AppTheme.Fonts.title)
 
                 Text("v\(updateInfo.version)")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.blue)
+                    .font(AppTheme.Fonts.subtitle)
+                    .foregroundColor(AppTheme.Colors.primary)
             }
 
             // 发布信息
             HStack(spacing: 16) {
                 Label(updateInfo.formattedPublishDate, systemImage: "calendar")
-                    .font(.system(size: 12))
+                    .font(AppTheme.Fonts.caption)
                     .foregroundColor(.secondary)
 
                 if let size = updateInfo.formattedAssetSize {
                     Label(size, systemImage: "arrow.down.circle")
-                        .font(.system(size: 12))
+                        .font(AppTheme.Fonts.caption)
                         .foregroundColor(.secondary)
                 }
             }
@@ -987,23 +1202,22 @@ struct UpdateAvailableSheet: View {
             if !updateInfo.releaseNotes.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("更新说明")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.primary)
+                        .font(AppTheme.Fonts.subtitle)
 
                     ScrollView {
                         Text(updateInfo.releaseNotes)
-                            .font(.system(size: 12))
+                            .font(AppTheme.Fonts.body)
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .textSelection(.enabled)
                     }
-                    .frame(maxHeight: 150)
+                    .frame(maxHeight: 120)
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(NSColor.controlBackgroundColor))
+                        .fill(AppTheme.Colors.cardBackground)
                 )
             }
 
@@ -1015,34 +1229,31 @@ struct UpdateAvailableSheet: View {
 
                     HStack {
                         Text("正在下载...")
-                            .font(.system(size: 12))
+                            .font(AppTheme.Fonts.caption)
                             .foregroundColor(.secondary)
 
                         Spacer()
 
                         Text("\(Int(updateManager.downloadProgress * 100))%")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.primary)
+                            .font(AppTheme.Fonts.caption)
                     }
                 }
-                .padding(.horizontal, 4)
             }
 
             // 下载错误
             if let error = updateManager.downloadError {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
+                        .foregroundColor(AppTheme.Colors.danger)
                     Text(error)
-                        .foregroundColor(.red)
+                        .foregroundColor(AppTheme.Colors.danger)
                 }
-                .font(.system(size: 12))
+                .font(AppTheme.Fonts.caption)
             }
 
             // 按钮
             VStack(spacing: 12) {
                 if updateManager.updateReady {
-                    // 更新已准备就绪，显示重启按钮
                     Button(action: {
                         updateManager.restartToUpdate()
                     }) {
@@ -1054,14 +1265,13 @@ struct UpdateAvailableSheet: View {
                     }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
-                    .tint(.green)
+                    .tint(AppTheme.Colors.success)
                     .controlSize(.large)
 
                     Button("稍后重启") {
                         onDismiss()
                     }
                     .buttonStyle(.bordered)
-                    .font(.system(size: 13))
 
                 } else if updateManager.isDownloading {
                     Button(action: {
@@ -1089,6 +1299,7 @@ struct UpdateAvailableSheet: View {
                     }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.Colors.primary)
                     .controlSize(.large)
 
                     HStack(spacing: 12) {
@@ -1103,11 +1314,10 @@ struct UpdateAvailableSheet: View {
                         .buttonStyle(.plain)
                         .foregroundColor(.secondary)
                     }
-                    .font(.system(size: 13))
                 }
             }
         }
-        .padding(30)
+        .padding(32)
         .frame(width: 400)
     }
 }

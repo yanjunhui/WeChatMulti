@@ -321,6 +321,77 @@ struct InstanceRowView: View {
     }
 }
 
+// MARK: - 新建实例行
+
+/// 新建实例行视图
+struct AddInstanceRowView: View {
+
+    /// 是否正在创建
+    let isLoading: Bool
+
+    /// 点击回调
+    let onTap: () -> Void
+
+    /// 是否悬停
+    @State private var isHovered: Bool = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // 加号图标
+            ZStack {
+                Circle()
+                    .stroke(
+                        isHovered ? AppTheme.Colors.primary : Color.secondary.opacity(0.3),
+                        style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                    )
+                    .frame(width: 36, height: 36)
+
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                } else {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(isHovered ? AppTheme.Colors.primary : .secondary)
+                }
+            }
+
+            // 文字
+            VStack(alignment: .leading, spacing: 2) {
+                Text(isLoading ? "正在创建..." : "新建微信")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(isHovered ? AppTheme.Colors.primary : .secondary)
+
+                Text(isLoading ? "请稍候" : "点击启动新实例")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary.opacity(0.7))
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isHovered ? AppTheme.Colors.primary.opacity(0.08) : Color.clear)
+        )
+        .onHover { hovering in
+            if !isLoading {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isHovered = hovering
+                }
+            }
+        }
+        .onTapGesture {
+            if !isLoading {
+                onTap()
+            }
+        }
+        .disabled(isLoading)
+    }
+}
+
 // MARK: - 预览
 
 #Preview {
@@ -355,6 +426,11 @@ struct InstanceRowView: View {
             onRename: { name in print("重命名: \(name)") },
             onDelete: { print("删除") }
         )
+
+        // 新建实例行
+        AddInstanceRowView(isLoading: false) {
+            print("新建")
+        }
     }
     .padding()
     .frame(width: 420)
