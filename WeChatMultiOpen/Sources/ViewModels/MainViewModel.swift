@@ -52,10 +52,22 @@ final class MainViewModel: ObservableObject {
     /// 是否显示删除副本确认对话框
     @Published var showDeleteConfirmation: Bool = false
 
+    /// 是否有可用更新
+    @Published var hasAvailableUpdate: Bool = false
+
+    /// 可用更新信息
+    @Published var availableUpdate: UpdateInfo?
+
+    /// 是否显示更新弹窗
+    @Published var showUpdateAlert: Bool = false
+
     // MARK: - 私有属性
 
     /// 微信管理器
     private let wechatManager = WeChatManager.shared
+
+    /// 更新管理器
+    private let updateManager = UpdateManager.shared
 
     /// Combine取消令牌集合
     private var cancellables = Set<AnyCancellable>()
@@ -229,6 +241,58 @@ final class MainViewModel: ObservableObject {
         if let path = wechatPath {
             NSWorkspace.shared.selectFile(path, inFileViewerRootedAtPath: "")
         }
+    }
+
+    // MARK: - 更新检查
+
+    /// 检查应用更新（静默模式，用于启动时自动检查）
+    func checkForUpdatesSilently() {
+        Task {
+            if let update = await updateManager.checkForUpdatesSilently() {
+                await MainActor.run {
+                    self.availableUpdate = update
+                    self.hasAvailableUpdate = true
+                    self.showUpdateAlert = true
+                }
+            }
+        }
+    }
+
+    /// 检查应用更新（用户手动触发）
+    func checkForUpdates() {
+        Task {
+            let result = await updateManager.checkForUpdates()
+            switch result {
+            case .available(let update):
+                self.availableUpdate = update
+                self.hasAvailableUpdate = true
+                self.showUpdateAlert = true
+            case .upToDate:
+                self.hasAvailableUpdate = false
+                self.availableUpdate = nil
+            case .error:
+                // 错误已在 updateManager 中处理
+                break
+            }
+        }
+    }
+
+    /// 打开更新下载页面
+    func openUpdateDownloadPage() {
+        updateManager.openDownloadPage()
+    }
+
+    /// 忽略当前版本更新
+    func ignoreCurrentUpdate() {
+        updateManager.ignoreCurrentUpdate()
+        hasAvailableUpdate = false
+        availableUpdate = nil
+        showUpdateAlert = false
+    }
+
+    /// 关闭更新弹窗
+    func dismissUpdateAlert() {
+        showUpdateAlert = false
     }
 
     // MARK: - 私有方法

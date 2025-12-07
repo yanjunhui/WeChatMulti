@@ -35,6 +35,9 @@ struct SettingsView: View {
     /// 终止实例前需要确认
     @AppStorage("confirmBeforeTerminate") private var confirmBeforeTerminate: Bool = true
 
+    /// 启动时检查更新
+    @AppStorage("checkUpdateOnLaunch") private var checkUpdateOnLaunch: Bool = true
+
     /// 开机自启管理器
     @StateObject private var launchManager = LaunchAtLoginManager.shared
 
@@ -76,6 +79,15 @@ struct SettingsView: View {
 
     /// 过期克隆体数量
     @State private var outdatedCount: Int = 0
+
+    /// 更新管理器
+    @StateObject private var updateManager = UpdateManager.shared
+
+    /// 是否显示更新弹窗
+    @State private var showUpdateSheet: Bool = false
+
+    /// 显示已是最新版本状态（检查后短暂显示）
+    @State private var showUpToDate: Bool = false
 
     // MARK: - 视图
 
@@ -137,6 +149,15 @@ struct SettingsView: View {
                             isOn: $hideWindowOnLaunch
                         )
                         .disabled(!showMenuBarIcon)
+
+                        Divider()
+                            .padding(.vertical, 4)
+
+                        settingsToggle(
+                            title: "启动时检查更新",
+                            description: "应用启动时自动检查 GitHub 上是否有新版本",
+                            isOn: $checkUpdateOnLaunch
+                        )
                     }
 
                     // 安全设置
@@ -207,6 +228,24 @@ struct SettingsView: View {
             }
         } message: {
             Text(upgradeResultMessage ?? "")
+        }
+        .sheet(isPresented: $showUpdateSheet) {
+            if let update = updateManager.availableUpdate {
+                UpdateAvailableSheet(
+                    updateInfo: update,
+                    onDismiss: {
+                        showUpdateSheet = false
+                    },
+                    onDownload: {
+                        updateManager.openDownloadPage()
+                        showUpdateSheet = false
+                    },
+                    onIgnore: {
+                        updateManager.ignoreCurrentUpdate()
+                        showUpdateSheet = false
+                    }
+                )
+            }
         }
     }
 
@@ -551,15 +590,83 @@ struct SettingsView: View {
     private var aboutContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("版本")
+                Text("当前版本")
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
 
                 Spacer()
 
-                Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0")
+                Text(updateManager.getCurrentVersion())
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.primary)
+            }
+
+            Divider()
+
+            // 更新检查
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("检查更新")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+
+                    if showUpToDate {
+                        // 已是最新版本状态
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 9))
+                            Text("已是最新版本")
+                        }
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.green)
+                    } else if let lastCheck = updateManager.getFormattedLastCheckTime() {
+                        Text("上次检查: \(lastCheck)")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
+                }
+
+                Spacer()
+
+                if updateManager.isChecking {
+                    ProgressView()
+                        .controlSize(.small)
+                        .scaleEffect(0.8)
+                } else if updateManager.hasUpdate, let update = updateManager.availableUpdate {
+                    Button(action: {
+                        showUpdateSheet = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.down.circle.fill")
+                                .foregroundColor(.green)
+                            Text("v\(update.version) 可用")
+                                .foregroundColor(.green)
+                        }
+                        .font(.system(size: 12, weight: .medium))
+                    }
+                    .buttonStyle(.plain)
+                } else if showUpToDate {
+                    // 已是最新，显示绿色勾
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("最新")
+                            .foregroundColor(.green)
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                } else {
+                    Button(action: {
+                        checkForAppUpdate()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.clockwise")
+                            Text("检查")
+                        }
+                        .font(.system(size: 12))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
             }
 
             Divider()
@@ -665,6 +772,31 @@ struct SettingsView: View {
 
             showUpgradeResult = true
             checkOutdatedCopies()
+        }
+    }
+
+    /// 检查应用更新
+    private func checkForAppUpdate() {
+        // 重置状态
+        showUpToDate = false
+
+        Task {
+            let result = await updateManager.checkForUpdates()
+
+            switch result {
+            case .available:
+                showUpdateSheet = true
+            case .upToDate:
+                // 显示已是最新版本
+                showUpToDate = true
+                // 5秒后恢复显示检查按钮
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                    showUpToDate = false
+                }
+            case .error:
+                // 错误情况，不做特殊处理
+                break
+            }
         }
     }
 }
@@ -804,6 +936,176 @@ struct ClearDataConfirmationSheet: View {
         }
         .padding(30)
         .frame(width: 420)
+    }
+}
+
+// MARK: - 更新可用弹窗
+
+/// 更新可用弹窗
+struct UpdateAvailableSheet: View {
+    let updateInfo: UpdateInfo
+    let onDismiss: () -> Void
+    let onDownload: () -> Void
+    let onIgnore: () -> Void
+
+    @StateObject private var updateManager = UpdateManager.shared
+
+    var body: some View {
+        VStack(spacing: 20) {
+            // 图标
+            Image(systemName: "arrow.down.app.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.blue)
+
+            // 标题
+            VStack(spacing: 4) {
+                Text("发现新版本")
+                    .font(.system(size: 18, weight: .semibold))
+
+                Text("v\(updateInfo.version)")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.blue)
+            }
+
+            // 发布信息
+            HStack(spacing: 16) {
+                Label(updateInfo.formattedPublishDate, systemImage: "calendar")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+
+                if let size = updateInfo.formattedAssetSize {
+                    Label(size, systemImage: "arrow.down.circle")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            // 更新说明
+            if !updateInfo.releaseNotes.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("更新说明")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.primary)
+
+                    ScrollView {
+                        Text(updateInfo.releaseNotes)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxHeight: 150)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(NSColor.controlBackgroundColor))
+                )
+            }
+
+            // 下载进度
+            if updateManager.isDownloading {
+                VStack(spacing: 8) {
+                    ProgressView(value: updateManager.downloadProgress)
+                        .progressViewStyle(.linear)
+
+                    HStack {
+                        Text("正在下载...")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Text("\(Int(updateManager.downloadProgress * 100))%")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+
+            // 下载错误
+            if let error = updateManager.downloadError {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.red)
+                    Text(error)
+                        .foregroundColor(.red)
+                }
+                .font(.system(size: 12))
+            }
+
+            // 按钮
+            VStack(spacing: 12) {
+                if updateManager.updateReady {
+                    // 更新已准备就绪，显示重启按钮
+                    Button(action: {
+                        updateManager.restartToUpdate()
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                            Text("立即重启")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .controlSize(.large)
+
+                    Button("稍后重启") {
+                        onDismiss()
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.system(size: 13))
+
+                } else if updateManager.isDownloading {
+                    Button(action: {
+                        updateManager.cancelDownload()
+                    }) {
+                        HStack {
+                            Image(systemName: "xmark.circle.fill")
+                            Text("取消下载")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                } else {
+                    Button(action: {
+                        Task {
+                            await updateManager.downloadAndInstallUpdate()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.down.circle.fill")
+                            Text("下载并安装")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+
+                    HStack(spacing: 12) {
+                        Button("稍后提醒") {
+                            onDismiss()
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button("忽略此版本") {
+                            onIgnore()
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.secondary)
+                    }
+                    .font(.system(size: 13))
+                }
+            }
+        }
+        .padding(30)
+        .frame(width: 400)
     }
 }
 

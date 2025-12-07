@@ -24,6 +24,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 微信管理器
     private let wechatManager = WeChatManager.shared
 
+    /// 更新管理器
+    private let updateManager = UpdateManager.shared
+
     /// 是否显示菜单栏图标
     @AppStorage("showMenuBarIcon") private var showMenuBarIcon: Bool = true
 
@@ -33,9 +36,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 启动后自动隐藏主窗口
     @AppStorage("hideWindowOnLaunch") private var hideWindowOnLaunch: Bool = false
 
+    /// 启动时检查更新
+    @AppStorage("checkUpdateOnLaunch") private var checkUpdateOnLaunch: Bool = true
+
     // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // 检查是否已有实例在运行，禁止多开
+        if checkIfAlreadyRunning() {
+            return
+        }
+
         // 设置菜单栏
         if showMenuBarIcon {
             menuBarManager.setup()
@@ -56,6 +67,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 激活应用
         NSApp.activate(ignoringOtherApps: true)
+
+        // 启动时检查更新（延迟 2 秒，避免影响启动速度）
+        if checkUpdateOnLaunch {
+            Task {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                await checkForUpdatesOnLaunch()
+            }
+        }
+    }
+
+    /// 检查应用是否已经在运行
+    /// - Returns: true 表示已有实例在运行，当前实例应退出
+    private func checkIfAlreadyRunning() -> Bool {
+        let bundleId = Bundle.main.bundleIdentifier ?? "com.yanjunhui.WeChatMultiOpen"
+        let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
+
+        // 如果有超过一个实例在运行（包括当前实例）
+        if runningApps.count > 1 {
+            // 找到已经在运行的实例（不是当前进程）
+            let currentPid = ProcessInfo.processInfo.processIdentifier
+            if let existingApp = runningApps.first(where: { $0.processIdentifier != currentPid }) {
+                // 激活已有实例的窗口
+                existingApp.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+
+                // 直接退出当前实例
+                NSApp.terminate(nil)
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /// 启动时检查更新
+    @MainActor
+    private func checkForUpdatesOnLaunch() async {
+        if let update = await updateManager.checkForUpdatesSilently() {
+            // 显示更新提示
+            showUpdateAlert(update: update)
+        }
+    }
+
+    /// 显示更新提示弹窗
+    @MainActor
+    private func showUpdateAlert(update: UpdateInfo) {
+        let alert = NSAlert()
+        alert.messageText = "发现新版本 v\(update.version)"
+        alert.informativeText = "当前版本: \(updateManager.getCurrentVersion())\n发布日期: \(update.formattedPublishDate)\n\n是否前往下载？"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "前往下载")
+        alert.addButton(withTitle: "稍后提醒")
+        alert.addButton(withTitle: "忽略此版本")
+
+        let response = alert.runModal()
+        switch response {
+        case .alertFirstButtonReturn:
+            updateManager.openDownloadPage()
+        case .alertThirdButtonReturn:
+            updateManager.ignoreCurrentUpdate()
+        default:
+            break
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
