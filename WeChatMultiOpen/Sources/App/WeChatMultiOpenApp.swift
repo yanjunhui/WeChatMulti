@@ -31,6 +31,19 @@ struct WeChatMultiOpenApp: App {
                     openAboutWindow()
                 }
             }
+
+            // 替换默认的退出命令，确保能正常退出
+            CommandGroup(replacing: .appTermination) {
+                Button("退出微信多开") {
+                    // 先强制关闭所有窗口，避免窗口 delegate 阻止退出
+                    for window in NSApplication.shared.windows {
+                        window.delegate = nil
+                        window.close()
+                    }
+                    NSApplication.shared.terminate(nil)
+                }
+                .keyboardShortcut("q", modifiers: .command)
+            }
         }
     }
 

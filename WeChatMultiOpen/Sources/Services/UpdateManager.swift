@@ -425,20 +425,22 @@ final class UpdateManager: ObservableObject {
             // 挂载 DMG
             let mountPoint = try await mountDMG(at: dmgUrl)
 
-            defer {
-                // 卸载 DMG
-                unmountDMG(at: mountPoint)
-            }
-
             // 查找 .app 文件
             let contents = try FileManager.default.contentsOfDirectory(at: mountPoint, includingPropertiesForKeys: nil)
             guard let appUrl = contents.first(where: { $0.pathExtension == "app" }) else {
+                unmountDMG(at: mountPoint)
                 downloadError = "DMG 中未找到应用程序"
                 return
             }
 
-            // 执行安装
-            try await performInstallation(from: appUrl)
+            // 先将应用复制到持久临时目录，避免 DMG 卸载后文件丢失
+            let stagingUrl = try copyToStagingDirectory(from: appUrl)
+
+            // 卸载 DMG
+            unmountDMG(at: mountPoint)
+
+            // 执行安装（使用复制后的路径）
+            try await performInstallation(from: stagingUrl)
 
         } catch {
             downloadError = "安装失败: \(error.localizedDescription)"
@@ -453,11 +455,6 @@ final class UpdateManager: ObservableObject {
             let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
             try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
 
-            defer {
-                // 清理临时目录
-                try? FileManager.default.removeItem(at: tempDir)
-            }
-
             // 解压 ZIP
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
@@ -466,6 +463,7 @@ final class UpdateManager: ObservableObject {
             process.waitUntilExit()
 
             guard process.terminationStatus == 0 else {
+                try? FileManager.default.removeItem(at: tempDir)
                 downloadError = "解压失败"
                 return
             }
@@ -473,16 +471,44 @@ final class UpdateManager: ObservableObject {
             // 查找 .app 文件
             let contents = try FileManager.default.contentsOfDirectory(at: tempDir, includingPropertiesForKeys: nil)
             guard let appUrl = contents.first(where: { $0.pathExtension == "app" }) else {
+                try? FileManager.default.removeItem(at: tempDir)
                 downloadError = "ZIP 中未找到应用程序"
                 return
             }
 
-            // 执行安装
-            try await performInstallation(from: appUrl)
+            // 先将应用复制到持久临时目录
+            let stagingUrl = try copyToStagingDirectory(from: appUrl)
+
+            // 清理解压临时目录
+            try? FileManager.default.removeItem(at: tempDir)
+
+            // 执行安装（使用复制后的路径）
+            try await performInstallation(from: stagingUrl)
 
         } catch {
             downloadError = "安装失败: \(error.localizedDescription)"
         }
+    }
+
+    /// 将应用复制到持久的临时目录（用于更新脚本执行）
+    private func copyToStagingDirectory(from sourceUrl: URL) throws -> URL {
+        let fileManager = FileManager.default
+
+        // 创建专用的 staging 目录
+        let stagingDir = fileManager.temporaryDirectory.appendingPathComponent("WeChatMultiUpdate")
+
+        // 清理旧的 staging 目录
+        if fileManager.fileExists(atPath: stagingDir.path) {
+            try? fileManager.removeItem(at: stagingDir)
+        }
+
+        try fileManager.createDirectory(at: stagingDir, withIntermediateDirectories: true)
+
+        // 复制应用到 staging 目录
+        let destUrl = stagingDir.appendingPathComponent(sourceUrl.lastPathComponent)
+        try fileManager.copyItem(at: sourceUrl, to: destUrl)
+
+        return destUrl
     }
 
     /// 挂载 DMG
@@ -685,16 +711,22 @@ final class UpdateManager: ObservableObject {
 
     /// 创建需要管理员权限的更新脚本
     private func createAdminUpdateScript(newAppPath: String, targetPath: String, backupPath: String, appBundleId: String) -> String {
+        // 从目标路径提取应用名称（不含 .app 后缀）
+        let appName = URL(fileURLWithPath: targetPath).deletingPathExtension().lastPathComponent
+
         return """
         #!/bin/bash
 
         # 等待应用退出
         sleep 1
 
-        # 等待应用进程完全退出
-        while pgrep -f "\(appBundleId)" > /dev/null; do
+        # 等待应用进程完全退出（使用进程名匹配）
+        while pgrep -x "\(appName)" > /dev/null; do
             sleep 0.5
         done
+
+        # 再等待一下确保文件释放
+        sleep 0.5
 
         # 使用 osascript 执行需要管理员权限的操作
         osascript -e 'do shell script "
@@ -740,39 +772,112 @@ final class UpdateManager: ObservableObject {
 
     /// 创建更新脚本
     private func createUpdateScript(newAppPath: String, targetPath: String, backupPath: String, appBundleId: String) -> String {
+        // 从目标路径提取应用名称（不含 .app 后缀）
+        let appName = URL(fileURLWithPath: targetPath).deletingPathExtension().lastPathComponent
+        // 日志文件路径
+        let logPath = FileManager.default.temporaryDirectory.appendingPathComponent("update_app.log").path
+
         return """
         #!/bin/bash
+
+        LOG_FILE="\(logPath)"
+        exec > "$LOG_FILE" 2>&1
+
+        echo "=== 更新脚本开始执行 ==="
+        echo "时间: $(date)"
+        echo "新版本路径: \(newAppPath)"
+        echo "目标路径: \(targetPath)"
+        echo "备份路径: \(backupPath)"
+        echo "进程名: \(appName)"
+
+        # 检查新版本是否存在
+        if [ ! -d "\(newAppPath)" ]; then
+            echo "错误: 新版本不存在!"
+            osascript -e 'display alert "更新失败" message "新版本文件不存在，请重新下载。"'
+            exit 1
+        fi
+
+        echo "新版本存在，大小: $(du -sh "\(newAppPath)" | cut -f1)"
 
         # 等待应用退出
         sleep 1
 
-        # 等待应用进程完全退出
-        while pgrep -f "\(appBundleId)" > /dev/null; do
+        # 等待应用进程完全退出（使用进程名匹配）
+        echo "等待进程 \(appName) 退出..."
+        WAIT_COUNT=0
+        while pgrep -x "\(appName)" > /dev/null; do
             sleep 0.5
+            WAIT_COUNT=$((WAIT_COUNT + 1))
+            if [ $WAIT_COUNT -gt 20 ]; then
+                echo "警告: 等待超时，强制继续"
+                break
+            fi
         done
+        echo "进程已退出"
+
+        # 再等待一下确保文件释放
+        sleep 0.5
 
         # 删除旧备份
+        echo "删除旧备份..."
         rm -rf "\(backupPath)"
 
         # 备份当前版本
         if [ -d "\(targetPath)" ]; then
+            echo "备份当前版本..."
             mv "\(targetPath)" "\(backupPath)"
+            if [ $? -ne 0 ]; then
+                echo "错误: 备份失败!"
+                exit 1
+            fi
         fi
 
         # 复制新版本
+        echo "复制新版本..."
         cp -R "\(newAppPath)" "\(targetPath)"
+        if [ $? -ne 0 ]; then
+            echo "错误: 复制失败，尝试恢复备份..."
+            if [ -d "\(backupPath)" ]; then
+                mv "\(backupPath)" "\(targetPath)"
+            fi
+            osascript -e 'display alert "更新失败" message "无法复制新版本，已恢复旧版本。"'
+            exit 1
+        fi
 
         # 设置权限
+        echo "设置权限..."
         chmod -R 755 "\(targetPath)"
-        xattr -cr "\(targetPath)"
+        xattr -cr "\(targetPath)" 2>/dev/null
+
+        # 验证新版本
+        if [ ! -d "\(targetPath)" ]; then
+            echo "错误: 新版本安装验证失败!"
+            if [ -d "\(backupPath)" ]; then
+                mv "\(backupPath)" "\(targetPath)"
+            fi
+            osascript -e 'display alert "更新失败" message "安装验证失败，已恢复旧版本。"'
+            exit 1
+        fi
+
+        echo "新版本安装成功，大小: $(du -sh "\(targetPath)" | cut -f1)"
 
         # 启动新版本
+        echo "启动新版本..."
         sleep 0.5
         open "\(targetPath)"
 
-        # 清理备份（可选，延迟删除）
+        if [ $? -eq 0 ]; then
+            echo "启动命令执行成功"
+        else
+            echo "错误: 启动失败!"
+        fi
+
+        # 清理备份（延迟删除）
         sleep 10
+        echo "清理备份..."
         rm -rf "\(backupPath)"
+
+        echo "=== 更新脚本执行完成 ==="
 
         # 删除脚本自身
         rm -f "$0"
@@ -799,16 +904,24 @@ final class UpdateManager: ObservableObject {
 
     /// 启动更新脚本并退出应用
     private func launchUpdateScript(at scriptPath: String) {
+        // 使用 nohup 和 & 确保脚本在后台独立运行，不受父进程退出影响
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [scriptPath]
+        process.arguments = ["-c", "nohup \(scriptPath) > /dev/null 2>&1 &"]
         process.standardOutput = nil
         process.standardError = nil
 
         do {
             try process.run()
-            // 退出当前应用
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            process.waitUntilExit()
+
+            // 强制退出当前应用
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                // 先关闭所有窗口
+                for window in NSApplication.shared.windows {
+                    window.delegate = nil
+                    window.close()
+                }
                 NSApplication.shared.terminate(nil)
             }
         } catch {

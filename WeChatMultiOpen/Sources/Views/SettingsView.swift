@@ -780,6 +780,9 @@ struct SettingsView: View {
         // 重置状态
         showUpToDate = false
 
+        // 手动检查时清除之前忽略的版本状态
+        updateManager.resetIgnoredVersion()
+
         Task {
             let result = await updateManager.checkForUpdates()
 

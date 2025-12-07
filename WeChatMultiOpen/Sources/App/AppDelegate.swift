@@ -131,6 +131,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // 关闭所有窗口，确保设置窗口等不会阻止退出
+        for window in NSApp.windows {
+            window.close()
+        }
+        return .terminateNow
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         // 点击 Dock 图标时显示主窗口
         if !flag {
