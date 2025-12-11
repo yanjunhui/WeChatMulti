@@ -30,6 +30,9 @@ final class MenuBarManager: NSObject, ObservableObject {
     /// 微信管理器
     private let wechatManager = WeChatManager.shared
 
+    /// 开机启动管理器
+    private let launchManager = LaunchAtLoginManager.shared
+
     /// Combine取消令牌集合
     private var cancellables = Set<AnyCancellable>()
 
@@ -90,6 +93,14 @@ final class MenuBarManager: NSObject, ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.update()
+            }
+            .store(in: &cancellables)
+
+        // 监听开机启动状态变化，更新菜单栏
+        launchManager.$isEnabled
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateMenu()
             }
             .store(in: &cancellables)
     }
@@ -330,39 +341,28 @@ final class MenuBarManager: NSObject, ObservableObject {
 
     /// 检查是否启用开机启动
     private func isLaunchAtLoginEnabled() -> Bool {
-        if #available(macOS 13.0, *) {
-            return SMAppService.mainApp.status == .enabled
-        } else {
-            return false
-        }
+        return launchManager.isEnabled
     }
 
     /// 切换开机启动
     @objc private func toggleLaunchAtLogin() {
-        if #available(macOS 13.0, *) {
-            do {
-                let service = SMAppService.mainApp
-                if service.status == .enabled {
-                    try service.unregister()
-                    print("✓ [开机启动] 已禁用")
-                } else {
-                    try service.register()
-                    print("✓ [开机启动] 已启用")
-                }
-                // 更新菜单显示
-                update()
-            } catch {
-                print("⚠️ [开机启动] 设置失败: \(error.localizedDescription)")
+        // 切换状态
+        let newState = !launchManager.isEnabled
+        launchManager.setLaunchAtLogin(enabled: newState)
 
-                // 显示错误提示
-                let alert = NSAlert()
-                alert.messageText = "开机启动设置失败"
-                alert.informativeText = error.localizedDescription
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "确定")
-                alert.runModal()
-            }
+        // 如果设置失败，显示错误
+        if let error = launchManager.errorMessage {
+            let alert = NSAlert()
+            alert.messageText = "开机启动设置失败"
+            alert.informativeText = error
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "确定")
+            alert.runModal()
+        } else {
+            print("✓ [开机启动] 已\(newState ? "启用" : "禁用")")
         }
+
+        // 菜单会通过监听 launchManager.$isEnabled 自动更新
     }
 
     /// 显示主窗口

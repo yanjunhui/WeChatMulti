@@ -45,6 +45,9 @@ final class LaunchAtLoginManager: ObservableObject {
 
             isEnabled = enabled
             errorMessage = nil
+
+            // 同步到 UserDefaults (AppStorage)
+            UserDefaults.standard.set(enabled, forKey: "launchAtLogin")
         } catch {
             errorMessage = "设置开机自启失败: \(error.localizedDescription)"
             print("设置开机自启失败: \(error)")
@@ -59,5 +62,8 @@ final class LaunchAtLoginManager: ObservableObject {
     /// 检查当前状态
     func checkCurrentStatus() {
         isEnabled = SMAppService.mainApp.status == .enabled
+
+        // 同步到 UserDefaults (AppStorage)
+        UserDefaults.standard.set(isEnabled, forKey: "launchAtLogin")
     }
 }
