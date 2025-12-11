@@ -9,6 +9,7 @@ import Foundation
 import AppKit
 import SwiftUI
 import Combine
+import ServiceManagement
 
 /// 菜单栏管理器
 /// 负责管理应用在菜单栏的图标和快捷菜单
@@ -55,7 +56,7 @@ final class MenuBarManager: NSObject, ObservableObject {
 
         if let button = statusItem?.button {
             button.image = createStatusBarImage()
-            button.image?.isTemplate = true
+            button.image?.isTemplate = false  // 不使用模板模式，保留图标原始颜色
             button.action = #selector(statusBarButtonClicked(_:))
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -93,63 +94,28 @@ final class MenuBarManager: NSObject, ObservableObject {
             .store(in: &cancellables)
     }
 
-    /// 创建状态栏图标 - 两个重叠的消息气泡，体现"多开"含义
+    /// 创建状态栏图标 - 使用微信多开应用图标
     private func createStatusBarImage() -> NSImage {
-        let size = NSSize(width: 18, height: 18)
-        let image = NSImage(size: size, flipped: false) { rect in
-            NSColor.black.setFill()
-            NSColor.black.setStroke()
-
-            // 后面的气泡（稍大，位置偏右上）
-            let backBubblePath = NSBezierPath()
-            backBubblePath.move(to: NSPoint(x: 6, y: 5))
-            backBubblePath.line(to: NSPoint(x: 6, y: 14))
-            backBubblePath.curve(to: NSPoint(x: 10, y: 17),
-                                controlPoint1: NSPoint(x: 6, y: 15.5),
-                                controlPoint2: NSPoint(x: 8, y: 17))
-            backBubblePath.line(to: NSPoint(x: 15, y: 17))
-            backBubblePath.curve(to: NSPoint(x: 18, y: 14),
-                                controlPoint1: NSPoint(x: 17, y: 17),
-                                controlPoint2: NSPoint(x: 18, y: 15.5))
-            backBubblePath.line(to: NSPoint(x: 18, y: 9))
-            backBubblePath.curve(to: NSPoint(x: 15, y: 6),
-                                controlPoint1: NSPoint(x: 18, y: 7.5),
-                                controlPoint2: NSPoint(x: 17, y: 6))
-            backBubblePath.line(to: NSPoint(x: 10, y: 6))
-            backBubblePath.curve(to: NSPoint(x: 6, y: 5),
-                                controlPoint1: NSPoint(x: 8, y: 6),
-                                controlPoint2: NSPoint(x: 6, y: 5.5))
-            backBubblePath.close()
-            backBubblePath.lineWidth = 1.5
-            backBubblePath.stroke()
-
-            // 前面的气泡（主气泡，位置偏左下）
-            let frontBubblePath = NSBezierPath()
-            frontBubblePath.move(to: NSPoint(x: 0, y: 1))
-            frontBubblePath.line(to: NSPoint(x: 0, y: 10))
-            frontBubblePath.curve(to: NSPoint(x: 3, y: 13),
-                                 controlPoint1: NSPoint(x: 0, y: 11.5),
-                                 controlPoint2: NSPoint(x: 1.5, y: 13))
-            frontBubblePath.line(to: NSPoint(x: 9, y: 13))
-            frontBubblePath.curve(to: NSPoint(x: 12, y: 10),
-                                 controlPoint1: NSPoint(x: 10.5, y: 13),
-                                 controlPoint2: NSPoint(x: 12, y: 11.5))
-            frontBubblePath.line(to: NSPoint(x: 12, y: 5))
-            frontBubblePath.curve(to: NSPoint(x: 9, y: 2),
-                                 controlPoint1: NSPoint(x: 12, y: 3.5),
-                                 controlPoint2: NSPoint(x: 10.5, y: 2))
-            frontBubblePath.line(to: NSPoint(x: 3, y: 2))
-            frontBubblePath.curve(to: NSPoint(x: 0, y: 1),
-                                 controlPoint1: NSPoint(x: 1.5, y: 2),
-                                 controlPoint2: NSPoint(x: 0, y: 1.5))
-            frontBubblePath.close()
-            frontBubblePath.fill()
-
-            return true
+        // 方法1: 从应用程序获取图标（最可靠的方式）
+        if let appIcon = NSApp.applicationIconImage {
+            let icon = appIcon.copy() as! NSImage
+            icon.size = NSSize(width: 18, height: 18)
+            print("✓ [状态栏图标] 成功获取应用图标，尺寸: \(icon.size)")
+            return icon
         }
 
-        image.isTemplate = true
-        return image
+        // 方法2: 从 Bundle 路径获取
+        if let bundlePath = Bundle.main.bundlePath as String? {
+            let icon = NSWorkspace.shared.icon(forFile: bundlePath)
+            icon.size = NSSize(width: 18, height: 18)
+            print("✓ [状态栏图标] 从 Bundle 路径获取图标，尺寸: \(icon.size)")
+            return icon
+        }
+
+        // 如果都失败，创建一个默认图标
+        print("⚠️ [状态栏图标] 无法获取应用图标，使用默认图标")
+        let defaultImage = NSImage(size: NSSize(width: 18, height: 18))
+        return defaultImage
     }
 
     /// 更新状态栏图标
@@ -168,71 +134,44 @@ final class MenuBarManager: NSObject, ObservableObject {
         }
     }
 
-    /// 创建带数字计数的状态栏图标（无背景，仅数字）
+    /// 创建带数字计数的状态栏图标
     private func createStatusBarImageWithCount(count: Int) -> NSImage {
+        // 获取应用图标
+        var appIcon: NSImage?
+
+        // 方法1: 从应用程序获取图标（最可靠的方式）
+        if let icon = NSApp.applicationIconImage {
+            appIcon = icon
+            print("✓ [带计数图标] 成功获取应用图标")
+        }
+        // 方法2: 从 Bundle 路径获取
+        else if let bundlePath = Bundle.main.bundlePath as String? {
+            appIcon = NSWorkspace.shared.icon(forFile: bundlePath)
+            print("✓ [带计数图标] 从 Bundle 路径获取图标")
+        }
+
+        guard let baseIcon = appIcon else {
+            print("⚠️ [带计数图标] 无法获取应用图标")
+            return NSImage(size: NSSize(width: 28, height: 18))
+        }
+
         let size = NSSize(width: 28, height: 18)
         let image = NSImage(size: size, flipped: false) { rect in
+            // 绘制应用图标
+            let iconRect = NSRect(x: 0, y: 0, width: 18, height: 18)
+            baseIcon.draw(in: iconRect)
 
-            // 绘制两个重叠的气泡图标（与原图标相同）
-            NSColor.black.setFill()
-            NSColor.black.setStroke()
-
-            // 后面的气泡
-            let backBubblePath = NSBezierPath()
-            backBubblePath.move(to: NSPoint(x: 6, y: 5))
-            backBubblePath.line(to: NSPoint(x: 6, y: 14))
-            backBubblePath.curve(to: NSPoint(x: 10, y: 17),
-                                controlPoint1: NSPoint(x: 6, y: 15.5),
-                                controlPoint2: NSPoint(x: 8, y: 17))
-            backBubblePath.line(to: NSPoint(x: 15, y: 17))
-            backBubblePath.curve(to: NSPoint(x: 18, y: 14),
-                                controlPoint1: NSPoint(x: 17, y: 17),
-                                controlPoint2: NSPoint(x: 18, y: 15.5))
-            backBubblePath.line(to: NSPoint(x: 18, y: 9))
-            backBubblePath.curve(to: NSPoint(x: 15, y: 6),
-                                controlPoint1: NSPoint(x: 18, y: 7.5),
-                                controlPoint2: NSPoint(x: 17, y: 6))
-            backBubblePath.line(to: NSPoint(x: 10, y: 6))
-            backBubblePath.curve(to: NSPoint(x: 6, y: 5),
-                                controlPoint1: NSPoint(x: 8, y: 6),
-                                controlPoint2: NSPoint(x: 6, y: 5.5))
-            backBubblePath.close()
-            backBubblePath.lineWidth = 1.5
-            backBubblePath.stroke()
-
-            // 前面的气泡
-            let frontBubblePath = NSBezierPath()
-            frontBubblePath.move(to: NSPoint(x: 0, y: 1))
-            frontBubblePath.line(to: NSPoint(x: 0, y: 10))
-            frontBubblePath.curve(to: NSPoint(x: 3, y: 13),
-                                 controlPoint1: NSPoint(x: 0, y: 11.5),
-                                 controlPoint2: NSPoint(x: 1.5, y: 13))
-            frontBubblePath.line(to: NSPoint(x: 9, y: 13))
-            frontBubblePath.curve(to: NSPoint(x: 12, y: 10),
-                                 controlPoint1: NSPoint(x: 10.5, y: 13),
-                                 controlPoint2: NSPoint(x: 12, y: 11.5))
-            frontBubblePath.line(to: NSPoint(x: 12, y: 5))
-            frontBubblePath.curve(to: NSPoint(x: 9, y: 2),
-                                 controlPoint1: NSPoint(x: 12, y: 3.5),
-                                 controlPoint2: NSPoint(x: 10.5, y: 2))
-            frontBubblePath.line(to: NSPoint(x: 3, y: 2))
-            frontBubblePath.curve(to: NSPoint(x: 0, y: 1),
-                                 controlPoint1: NSPoint(x: 1.5, y: 2),
-                                 controlPoint2: NSPoint(x: 0, y: 1.5))
-            frontBubblePath.close()
-            frontBubblePath.fill()
-
-            // 在图标右上角绘制数字（无背景）
+            // 在图标右侧绘制数字
             let countString = count > 9 ? "9+" : "\(count)"
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: NSFont.systemFont(ofSize: 10, weight: .bold),
-                .foregroundColor: NSColor.black
+                .foregroundColor: NSColor.labelColor  // 使用系统颜色，自动适配主题
             ]
             let attributedString = NSAttributedString(string: countString, attributes: attributes)
             let textSize = attributedString.size()
             let textRect = NSRect(
                 x: size.width - textSize.width - 1,
-                y: size.height - textSize.height,
+                y: (size.height - textSize.height) / 2,  // 垂直居中
                 width: textSize.width,
                 height: textSize.height
             )
@@ -241,7 +180,6 @@ final class MenuBarManager: NSObject, ObservableObject {
             return true
         }
 
-        image.isTemplate = true
         return image
     }
 
@@ -278,63 +216,69 @@ final class MenuBarManager: NSObject, ObservableObject {
 
         menu.removeAllItems()
 
-        // 标题
-        let titleItem = NSMenuItem(title: "微信多开助手", action: nil, keyEquivalent: "")
-        titleItem.isEnabled = false
-        menu.addItem(titleItem)
-
-        menu.addItem(NSMenuItem.separator())
-
-        // 实例列表（只显示运行中的实例）
-        let runningInstances = wechatManager.instances.filter { $0.isRunning && !$0.isCreating }
-        if runningInstances.isEmpty {
-            let emptyItem = NSMenuItem(title: "没有运行中的微信", action: nil, keyEquivalent: "")
+        // 实例列表（显示所有实例，包括未启动的）
+        let instances = wechatManager.instances.filter { !$0.isCreating }
+        if instances.isEmpty {
+            let emptyItem = NSMenuItem(title: "暂无微信实例", action: nil, keyEquivalent: "")
             emptyItem.isEnabled = false
             menu.addItem(emptyItem)
         } else {
-            for instance in runningInstances {
-                let pidText = instance.processId.map { "PID: \($0)" } ?? ""
+            for instance in instances {
+                // 根据运行状态显示不同的信息
+                let statusText: String
+                if instance.isRunning {
+                    statusText = instance.processId.map { "PID: \($0)" } ?? ""
+                } else {
+                    statusText = "未启动"
+                }
+
                 let item = NSMenuItem(
-                    title: "\(instance.displayName) (\(pidText))",
+                    title: "\(instance.displayName) (\(statusText))",
                     action: #selector(activateInstance(_:)),
                     keyEquivalent: ""
                 )
                 item.target = self
                 item.representedObject = instance
-                item.image = NSImage(systemSymbolName: "message.fill", accessibilityDescription: nil)
+
+                // 根据运行状态设置图标和启用状态
+                // 获取微信应用图标
+                let appIcon = getAppIcon(for: instance)
+
+                if instance.isRunning {
+                    // 运行中：显示应用图标，可点击
+                    item.image = appIcon
+                    item.isEnabled = true
+                } else {
+                    // 未启动：显示半透明的应用图标，禁用（灰色显示）
+                    if let icon = appIcon {
+                        let dimmedIcon = icon.copy() as! NSImage
+                        dimmedIcon.isTemplate = false
+                        item.image = dimmedIcon
+                    }
+                    item.isEnabled = false
+                }
+
                 menu.addItem(item)
             }
         }
 
         menu.addItem(NSMenuItem.separator())
 
-        // 启动新实例
-        let launchItem = NSMenuItem(
-            title: "启动新微信",
-            action: #selector(launchNewInstance),
-            keyEquivalent: "n"
+        // 开机启动
+        let launchAtLoginItem = NSMenuItem(
+            title: "开机启动",
+            action: #selector(toggleLaunchAtLogin),
+            keyEquivalent: ""
         )
-        launchItem.target = self
-        launchItem.keyEquivalentModifierMask = [.command]
-        launchItem.isEnabled = wechatManager.isWeChatInstalled
-        menu.addItem(launchItem)
-
-        // 终止所有实例
-        if !runningInstances.isEmpty {
-            let terminateAllItem = NSMenuItem(
-                title: "终止所有微信",
-                action: #selector(terminateAllInstances),
-                keyEquivalent: ""
-            )
-            terminateAllItem.target = self
-            menu.addItem(terminateAllItem)
-        }
+        launchAtLoginItem.target = self
+        launchAtLoginItem.state = isLaunchAtLoginEnabled() ? .on : .off
+        menu.addItem(launchAtLoginItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        // 显示主窗口
+        // 控制台
         let showWindowItem = NSMenuItem(
-            title: "显示主窗口",
+            title: "控制台",
             action: #selector(showMainWindow),
             keyEquivalent: "o"
         )
@@ -355,6 +299,27 @@ final class MenuBarManager: NSObject, ObservableObject {
         menu.addItem(quitItem)
     }
 
+    /// 获取应用图标
+    /// 原版微信使用微信自己的图标，克隆实例使用本应用图标
+    private func getAppIcon(for instance: WeChatInstance) -> NSImage? {
+        let icon: NSImage
+
+        if instance.isOriginal {
+            // 原版微信：使用微信应用的图标
+            guard let wechatPath = wechatManager.wechatPath else { return nil }
+            icon = NSWorkspace.shared.icon(forFile: wechatPath)
+        } else {
+            // 克隆实例：使用微信多开应用的图标
+            guard let appIcon = NSApp.applicationIconImage else { return nil }
+            icon = appIcon.copy() as! NSImage
+        }
+
+        // 设置合适的尺寸（菜单栏标准尺寸）
+        icon.size = NSSize(width: 18, height: 18)
+
+        return icon
+    }
+
     // MARK: - 菜单动作
 
     /// 激活实例
@@ -363,22 +328,40 @@ final class MenuBarManager: NSObject, ObservableObject {
         wechatManager.activateInstance(instance)
     }
 
-    /// 启动新实例
-    @objc private func launchNewInstance() {
-        wechatManager.launchNewInstance()
+    /// 检查是否启用开机启动
+    private func isLaunchAtLoginEnabled() -> Bool {
+        if #available(macOS 13.0, *) {
+            return SMAppService.mainApp.status == .enabled
+        } else {
+            return false
+        }
     }
 
-    /// 终止所有实例
-    @objc private func terminateAllInstances() {
-        let alert = NSAlert()
-        alert.messageText = "确认终止所有微信实例"
-        alert.informativeText = "确定要终止所有 \(wechatManager.instances.count) 个微信实例吗？未保存的数据可能会丢失。"
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "终止")
-        alert.addButton(withTitle: "取消")
+    /// 切换开机启动
+    @objc private func toggleLaunchAtLogin() {
+        if #available(macOS 13.0, *) {
+            do {
+                let service = SMAppService.mainApp
+                if service.status == .enabled {
+                    try service.unregister()
+                    print("✓ [开机启动] 已禁用")
+                } else {
+                    try service.register()
+                    print("✓ [开机启动] 已启用")
+                }
+                // 更新菜单显示
+                update()
+            } catch {
+                print("⚠️ [开机启动] 设置失败: \(error.localizedDescription)")
 
-        if alert.runModal() == .alertFirstButtonReturn {
-            wechatManager.terminateAllInstances()
+                // 显示错误提示
+                let alert = NSAlert()
+                alert.messageText = "开机启动设置失败"
+                alert.informativeText = error.localizedDescription
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "确定")
+                alert.runModal()
+            }
         }
     }
 

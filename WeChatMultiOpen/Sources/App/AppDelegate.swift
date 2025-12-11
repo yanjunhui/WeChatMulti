@@ -34,6 +34,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 更新管理器
     private let updateManager = UpdateManager.shared
 
+    /// 键盘监听器
+    private var keyboardMonitor: Any?
+
     /// 是否显示菜单栏图标
     @AppStorage("showMenuBarIcon") private var showMenuBarIcon: Bool = true
 
@@ -74,6 +77,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 激活应用
         NSApp.activate(ignoringOtherApps: true)
+
+        // 设置键盘监听（ESC 关闭窗口）
+        setupKeyboardMonitor()
 
         // 启动时检查更新（延迟 2 秒，避免影响启动速度）
         if checkUpdateOnLaunch {
@@ -119,6 +125,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // 移除键盘监听
+        if let monitor = keyboardMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+
         // 清理资源
         menuBarManager.remove()
     }
@@ -151,6 +162,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    // MARK: - 键盘监听
+
+    /// 设置键盘监听（ESC 关闭窗口）
+    private func setupKeyboardMonitor() {
+        keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            // ESC 键的 keyCode 是 53
+            if event.keyCode == 53 {
+                // 检查主窗口是否可见
+                if let mainWindow = self?.mainWindow, mainWindow.isVisible {
+                    mainWindow.orderOut(nil)
+                    return nil  // 消费此事件
+                }
+            }
+            return event  // 其他事件继续传递
+        }
+    }
+
     // MARK: - 窗口管理
 
     /// 创建主窗口
@@ -159,7 +187,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
@@ -168,7 +196,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.center()
         window.setFrameAutosaveName("MainWindow")
         window.contentView = NSHostingView(rootView: contentView)
-        window.minSize = NSSize(width: 420, height: 360)
         window.isReleasedWhenClosed = false
         window.delegate = self
 

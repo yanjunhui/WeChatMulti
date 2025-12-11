@@ -29,7 +29,7 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>LSUIElement</key>
-	<false/>
+	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>需要控制其他应用以激活微信窗口，为您提供更好的多开体验。</string>
 	<key>NSHumanReadableCopyright</key>
