@@ -122,6 +122,7 @@ final class WeChatManager: ObservableObject {
         let url = URL(fileURLWithPath: path)
 
         let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = false  // 如果已运行则激活
         configuration.activates = true
         configuration.hides = false
 
@@ -145,6 +146,7 @@ final class WeChatManager: ObservableObject {
         let url = URL(fileURLWithPath: copy.path)
 
         let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = false  // 如果已运行则激活
         configuration.activates = true
         configuration.hides = false
 
@@ -464,43 +466,49 @@ final class WeChatManager: ObservableObject {
     }
 
     /// 激活指定的微信实例窗口
+    /// 使用 NSWorkspace.openApplication API，当应用已运行时会自动激活到前台
     func activateInstance(_ instance: WeChatInstance) {
-        guard let pid = instance.processId else { return }
+        print("🔍 [开始激活] \(instance.displayName)")
 
-        // 使用 NSWorkspace 获取运行中的应用
-        let runningApps = NSWorkspace.shared.runningApplications.filter {
-            $0.processIdentifier == pid
+        // 确定应用路径
+        let appPath: String
+        if instance.isOriginal {
+            // 原版微信
+            guard let path = wechatPath else {
+                print("⚠️ [激活失败] 未找到微信应用路径")
+                return
+            }
+            appPath = path
+        } else {
+            // 副本
+            guard let copyPath = instance.copyPath else {
+                print("⚠️ [激活失败] 未找到副本路径")
+                return
+            }
+            appPath = copyPath
         }
 
-        if let app = runningApps.first {
-            // 如果应用被隐藏，先取消隐藏
-            if app.isHidden {
-                app.unhide()
+        let appURL = URL(fileURLWithPath: appPath)
+
+        // 配置：不创建新实例，激活已有实例
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = false  // 关键设置！
+        configuration.activates = true                        // 激活到前台
+        configuration.hides = false                           // 不隐藏
+
+        print("  → 使用 NSWorkspace.openApplication 激活...")
+
+        // 使用官方 API 打开/激活应用
+        // 如果应用已运行 → 激活到前台
+        // 如果应用未运行 → 启动应用
+        NSWorkspace.shared.openApplication(at: appURL, configuration: configuration) { app, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("⚠️ [激活失败] \(error.localizedDescription)")
+                } else if app != nil {
+                    print("✓ [激活完成] 「\(instance.displayName)」窗口已置顶")
+                }
             }
-
-            // 激活应用
-            app.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
-
-            // 使用 AppleScript 确保窗口显示（处理最小化的情况）
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.bringWindowToFront(bundleIdentifier: app.bundleIdentifier ?? instance.bundleIdentifier)
-            }
-        }
-    }
-
-    /// 使用 AppleScript 将窗口带到前台
-    private func bringWindowToFront(bundleIdentifier: String) {
-        // 使用 AppleScript 激活应用并显示窗口
-        let script = """
-        tell application id "\(bundleIdentifier)"
-            activate
-            reopen
-        end tell
-        """
-
-        if let appleScript = NSAppleScript(source: script) {
-            var error: NSDictionary?
-            appleScript.executeAndReturnError(&error)
         }
     }
 

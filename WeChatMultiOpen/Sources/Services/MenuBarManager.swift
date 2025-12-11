@@ -285,15 +285,15 @@ final class MenuBarManager: NSObject, ObservableObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        // 实例列表
-        let instances = wechatManager.instances
-        if instances.isEmpty {
+        // 实例列表（只显示运行中的实例）
+        let runningInstances = wechatManager.instances.filter { $0.isRunning && !$0.isCreating }
+        if runningInstances.isEmpty {
             let emptyItem = NSMenuItem(title: "没有运行中的微信", action: nil, keyEquivalent: "")
             emptyItem.isEnabled = false
             menu.addItem(emptyItem)
         } else {
-            for instance in instances {
-                let pidText = instance.processId.map { "PID: \($0)" } ?? "未运行"
+            for instance in runningInstances {
+                let pidText = instance.processId.map { "PID: \($0)" } ?? ""
                 let item = NSMenuItem(
                     title: "\(instance.displayName) (\(pidText))",
                     action: #selector(activateInstance(_:)),
@@ -320,7 +320,7 @@ final class MenuBarManager: NSObject, ObservableObject {
         menu.addItem(launchItem)
 
         // 终止所有实例
-        if !instances.isEmpty {
+        if !runningInstances.isEmpty {
             let terminateAllItem = NSMenuItem(
                 title: "终止所有微信",
                 action: #selector(terminateAllInstances),

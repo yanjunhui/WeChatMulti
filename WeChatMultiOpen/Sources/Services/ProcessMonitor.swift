@@ -176,7 +176,9 @@ final class ProcessMonitor {
     /// - Parameter pid: 进程ID
     /// - Returns: NSRunningApplication对象，如果找不到返回nil
     func getRunningApplication(pid: pid_t) -> NSRunningApplication? {
-        return NSRunningApplication(processIdentifier: pid)
+        // 使用 NSWorkspace 查找真正运行中的应用
+        // NSRunningApplication(processIdentifier:) 可能返回已终止的应用
+        return NSWorkspace.shared.runningApplications.first { $0.processIdentifier == pid }
     }
 
     // MARK: - 私有方法
